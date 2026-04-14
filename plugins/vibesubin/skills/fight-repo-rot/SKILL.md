@@ -157,7 +157,7 @@ Grep patterns that almost always indicate a portability bug:
 - `\\` as a path separator in string literals
 - References to usernames or machine names in paths
 
-Hand off to `manage-config-env` — it owns the fix pattern (constant vs env var decision).
+Hand off to `project-conventions` — it owns the fix pattern (constant vs env var decision, platform-portable alternatives).
 
 ### Stale TODOs
 
@@ -177,6 +177,19 @@ Compute with a language-specific import parser (`madge` for JS/TS, `pydeps` for 
 - Dependencies not updated in 2+ years (often abandoned)
 - Packages in the manifest but never imported (can be removed — dead dependencies are dead code)
 - Packages imported but not in the manifest (hallucinated import, or a missing install — `refactor-verify`'s job to fix)
+
+### Test rot
+
+Tests don't show up in standard dead-code scans because they're usually not imported by production code — they're invoked by a runner. That makes them a blind spot for rot. Things to flag:
+
+- **Dead tests** — tests for symbols that no longer exist. Grep each test file for references to its subject; if the subject is gone, the test is load-bearing on a memory.
+- **Obsolete fixtures** — fixture files under `tests/fixtures/` / `__fixtures__/` / `testdata/` that no test currently references. Apply the same grep check used for dead code.
+- **Snapshot rot** — snapshot files (`__snapshots__/`, `.snap`, `.png` golden files) orphaned from any test case.
+- **Skipped / disabled tests older than 6 months** — `.skip`, `xit`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip()`. Find via `git blame` on the skip directive.
+- **Hard-coded sleeps or long waits** — `time.sleep(5)`, `await new Promise(r => setTimeout(r, 5000))` inside test bodies. Usually a flaky-test band-aid that should be replaced with a proper wait condition.
+- **Test files > 500 lines or test functions > 50 lines** — same god-file thresholds apply; tests rot the same way.
+
+Test rot is still just rot — diagnosis only. Dead-test deletions go to `refactor-verify` with the same HIGH/MEDIUM/LOW confidence framing (a test importing a symbol via string name is MEDIUM, same as prod code).
 
 ## Output — prioritized diagnosis
 
@@ -222,7 +235,7 @@ Compute with a language-specific import parser (`madge` for JS/TS, `pydeps` for 
 - **Dead-code HIGH** (<N> items) → `refactor-verify` for safe deletion
 - **God files** (<N> items) → `refactor-verify` for safe splits
 - **Hotspots** (<N> items) → `refactor-verify` when the operator picks one
-- **Hardcoded paths** (<N> items) → `manage-config-env`
+- **Hardcoded paths** (<N> items) → `project-conventions`
 - **Dependency CVEs** (<N> items) → `audit-security`
 - **Stale TODOs becoming real work** → `write-for-ai` to file issues
 
@@ -260,9 +273,11 @@ Harsh mode does not invent findings, exaggerate confidence, or become rude. Ever
 - **Dead code (MEDIUM)** → operator confirmation required, then `refactor-verify`
 - **Dead code (LOW)** → human review required; never auto-hand-off
 - **God file, hotspot, or coupling smell** → `refactor-verify` for the safe split (operator picks one target)
-- **Hardcoded path / platform assumption** → `manage-config-env` for the fix pattern
+- **Hardcoded path / platform assumption** → `project-conventions` for the fix pattern
 - **Dependency CVE** → `audit-security` for severity and incident response
 - **Stale TODO becomes real work** → `write-for-ai` to file the issue
+- **Dead test / obsolete fixture / snapshot rot** → `refactor-verify` for safe deletion, same HIGH/MEDIUM/LOW framing
+- **Oversized binary / bloated asset directory / large blob in git history** → `manage-assets` for the bloat audit (separate from code-rot — this skill only mentions the finding in passing)
 
 ## Details and tools
 

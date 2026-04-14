@@ -83,6 +83,30 @@ Every README, CLAUDE.md, commit message, and PR body this skill produces is a po
 
 When in doubt, emit a placeholder and tell the operator: *"I've written `<YOUR_DB_HOSTNAME>` where the real hostname would go — replace it before you push, or leave it if the repo is private and the hostname is already public."*
 
+## Objectivity — no exaggeration, no marketing
+
+Every sentence written into a document must be either a verifiable fact or an opinion that is clearly labeled as one. LLM-generated docs drift toward enthusiastic framing ("fast", "best-in-class", "production-ready") because LLMs were trained on marketing copy and the enthusiastic version is the higher-probability next token. That drift is a bug in this pack.
+
+The rules below are enforced on every artifact this skill produces. A violation is not a style preference; it's a failure to ship.
+
+1. **No unbacked adjectives.** *"Fast"*, *"lightweight"*, *"robust"*, *"production-ready"*, *"scalable"*, *"best-in-class"*, *"seamless"*, *"intuitive"*, *"blazing"*, *"modern"* are marketing words. Delete them or back them immediately with a measurement, a link, or a date. A library is not *"fast"*; it's *"3.2× faster than the baseline on <benchmark>"*. A framework is not *"production-ready"*; it's *"running in production at <example> since <date>"*.
+
+2. **No superlatives without comparison.** *"The best"*, *"the most"*, *"the only"*, *"the simplest"*, *"the cleanest"* — if the comparison is not explicitly in the text, delete the superlative. *"Simple"* with a 3-line code example is fine; *"the simplest possible"* with nothing to compare against is marketing.
+
+3. **No marketing metaphors.** *"Battle-tested"* → *"running in production since YYYY-MM"* or delete. *"Zero-config"* → explicit list of defaults. *"Plug and play"* → concrete install steps. *"Out of the box"* → name the box.
+
+4. **No weasel hedging either.** The opposite failure mode is prose that commits to nothing: *"may work"*, *"can be useful for"*, *"might help"*, *"generally well-suited"*, *"depending on your needs"*, *"in some cases"*. Replace with a concrete yes/no and the condition, or delete.
+
+5. **Every capability claim has a verification command.** If the doc says *"this passes type check"*, the exact command that verifies it is on the next line. If the doc says *"works on Python 3.11+"*, the CI matrix or a `python_requires` entry backs it up. If neither exists, drop the claim.
+
+6. **Numbers are specific or absent.** *"About 500 lines"* is fine. *"A few hundred lines"* is not. *"Roughly 10,000 users"* is fine if you cite the source; *"many users"* is not.
+
+7. **Status flags are load-bearing.** *"early"*, *"stable"*, *"deprecated"*, *"experimental"* go in the header of every doc and they commit the writer to a maturity claim. Never default to *"stable"* to sound confident — if you're not sure, *"early"* is the honest answer.
+
+8. **No self-congratulation.** The doc does not compliment the project it describes. No *"cleanly written"*, no *"elegant API"*, no *"beautiful code"*. Those are the reader's call, not the writer's.
+
+This rule applies to the artifact the skill emits, not to how the operator ends up writing their own commits later. When the operator asks for a README and the repo genuinely is fast, the doc cites the benchmark; when the operator asks for a README and there is no benchmark, the doc does not say *"fast"* at all.
+
 ## Mandatory self-review before emitting anything
 
 This pack is published as open source. Do a final sanity pass on every artifact before you show it to the operator or write it to disk.
@@ -94,8 +118,9 @@ Checklist:
 3. **No leak surface** — no real secrets, no local absolute paths, no internal hostnames, no customer data
 4. **No weird public-facing prose** — no memes in formal docs, no chatty filler, no wording that looks machine-generated for its own sake
 5. **Verification claims are real** — if the doc says "tests pass" or "typecheck is clean," there is a concrete command next to it
+6. **Objective tone** — every rule from the Objectivity section above has been applied: no unbacked adjectives, no superlatives without comparison, no marketing metaphors, no weasel hedging, no self-congratulation. If you wrote *"fast"*, either there's a benchmark cited or the word is gone.
 
-If any of the five fail, fix the artifact before returning it. Open-source docs get screenshotted and quoted out of context; assume zero forgiveness.
+If any of the six fail, fix the artifact before returning it. Open-source docs get screenshotted and quoted out of context; assume zero forgiveness.
 
 ## Output principles (applied to every doc)
 
@@ -322,11 +347,25 @@ The operator reviews the sweep report and, if they want the fixes applied, invok
 
 How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
 
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"* / *"厳しめ"*), switch output rules on both the doc audit and the direct-invocation report:
+
+- **Lead with the worst doc failure.** First line is the single most important gap — *"this repo has no `CLAUDE.md`, so every new AI session starts blind"*, *"the README still documents `npm install` but the repo is on pnpm"*, *"the env-var table is 40% stale — `STRIPE_KEY` and `SENTRY_DSN` are missing"*. No preamble.
+- **No *"ghost docs"* euphemisms.** Balanced mode says *"docs are a bit thin in places"*. Harsh mode says *"the next AI session will reverse-engineer this project from code because the docs are lying about which commands work."*
+- **Marketing violations get called out by line.** Every *"fast"*, *"robust"*, *"production-ready"*, *"best-in-class"* that slipped into the existing doc gets a line-level flag: *"`README.md:14` claims `production-ready` with no production example — either cite a user, drop the claim, or downgrade the status to `early`."*
+- **Unverified claims are framed as lies-by-omission.** *"The README says the tests pass; there is no test command and no CI. Either add the command or delete the claim."*
+- **Doc rewrites get info-loss warnings in the verdict.** *"This rewrite drops 7 env-var entries from the old README. Either reinstate them or explicitly document why they were removed."*
+- **No *"mostly good with some polish"* closures when any doc is factually wrong.** Wrong commands are not polish. Missing invariants are not polish. Outdated paths are not polish.
+
+Harsh mode does not invent missing docs, exaggerate staleness, or become rude. Every harsh statement must cite the same file, line, or git-log evidence the balanced version would cite. The change is framing, not substance.
+
 ## Hand-offs
 
 - If rewriting a doc risks losing concrete facts → borrow the info-preservation check from `refactor-verify` (grep old doc's concrete terms, verify they appear in the new doc, or are deliberately dropped)
 - If documenting CI/CD → coordinate with `setup-ci` to make sure commands in the README match the workflow file
-- If documenting branches / config / env → coordinate with `manage-config-env` for the canonical defaults
+- If documenting secrets, `.env`, `.gitignore`, or anything in the env-var table → coordinate with `manage-secrets-env` for the canonical defaults and the lifecycle wording
+- If documenting branch strategy, directory layout, dependency pinning, or path portability → coordinate with `project-conventions`
 
 ## Details
 

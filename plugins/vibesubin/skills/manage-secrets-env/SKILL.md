@@ -1,15 +1,17 @@
 ---
-name: manage-config-env
-description: Opinionated defaults and full lifecycle playbook for config and secrets. Decides where a value lives (constant, .env, CI secret, env var), scaffolds .env.example and .gitignore, and manages the lifecycle end to end — add, update, rotate, remove, migrate between buckets, audit cross-environment drift, provision new environments. Also picks a branch strategy (GitHub Flow), enforces dependency pinning, and audits for hardcoded paths. Language-agnostic.
-when_to_use: Trigger on "where should this config go", ".env", "environment variable", "rotate this secret", "remove unused env var", "migrate to env var", "add staging environment", "check env drift", "audit secrets across environments", "branch strategy", "main or dev", "gitignore", "dependency version", "pin this", "config management", or when onboarding a new project that needs a baseline layout.
+name: manage-secrets-env
+description: Opinionated defaults and full lifecycle playbook for secrets and environment variables. Decides where a secret or env-specific value lives (constant, .env, CI secret, env var), scaffolds .env.example and .gitignore, and manages the lifecycle end to end — add, update, rotate, remove, migrate between buckets, audit cross-environment drift, provision new environments. High-stakes companion to project-conventions. Language-agnostic.
+when_to_use: Trigger on "where should this secret go", ".env", "environment variable", "rotate this secret", "remove unused env var", "migrate to env var", "add staging environment", "check env drift", "audit secrets across environments", ".gitignore" (for secret-shaped entries), "secret management", or when onboarding a new project that needs a baseline secrets layout.
 allowed-tools: Read Write Edit Glob Grep Bash(grep *) Bash(git *) Bash(gh secret *) Bash(vercel env *) Bash(fly secrets *) Bash(netlify env *) Bash(railway variables *) Bash(gcloud *) Bash(aws *)
 ---
 
-# manage-config-env
+# manage-secrets-env
 
-The operator has to make structural decisions every week: where does this value live? Should I pin this dependency? Is this `.env` entry right? Which branch should I work on? Each decision is a small tax on their attention. This skill pre-pays that tax with one opinionated answer per question.
+Every project has two kinds of structural decisions. Some are low-stakes — which branch naming, which directory layout — and a mistake costs a little friction. Some are high-stakes — where a database password lives, whether `.env` is tracked, whether a production token is in a build-time variable — and a mistake costs an incident.
 
-**The principle**: the best structure is the one the operator doesn't have to invent. When they ask "where should this go?", answer immediately and explain in one sentence. Don't present a decision framework; make the decision.
+This skill owns the high-stakes slice: **secrets, environment variables, and the gitignore that protects them**. The low-stakes conventions (branches, directories, dep pinning, path portability) live in `project-conventions`. Splitting them this way means the operator can trigger the right depth of care for the right question.
+
+**The principle**: the safest default is the one the operator doesn't have to invent. When they ask *"where does my DB password go?"*, answer immediately, explain in one sentence, and offer to scaffold.
 
 ## The four buckets — where does a value live?
 
@@ -116,54 +118,7 @@ Non-developers routinely commit `.env`, SSH keys, build artifacts, and OS litter
 
 Drop it in, trim the language sections the project doesn't use, and commit. If an existing `.gitignore` is missing secret-shaped entries (`.env`, `*.pem`, `id_rsa`), add them immediately — those are the ones that cause real incidents.
 
-## Dependency versioning — pin or bleed
-
-Unpinned dependencies are time bombs. The rule is simple and per-language.
-
-**Required everywhere**: every production dependency is pinned to an exact version, and the lockfile is committed.
-
-- Python: `requirements.txt` with `package==1.2.3` or `pyproject.toml` + `uv.lock` / `poetry.lock`.
-- Node: `package.json` + `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock` / `bun.lockb`.
-- Rust: `Cargo.toml` + committed `Cargo.lock` (yes, even for libraries now).
-- Go: `go.mod` + `go.sum`, both committed.
-- Ruby: `Gemfile` + `Gemfile.lock`.
-- PHP: `composer.json` + `composer.lock`.
-- Java / Kotlin: explicit versions in `pom.xml` / `build.gradle` — never `latest` or `+`.
-
-**Strongly recommended**: a dependency-update bot is active. GitHub ships Dependabot; Renovate works for GitLab and self-hosted. Weekly frequency for non-security updates, immediate for security. A starter `dependabot.yml` is in `templates/dependabot.yml.template`.
-
-**Optional**: CVE auditing in CI — `pip-audit` / `npm audit` / `cargo audit` / `govulncheck`. Add it as a warning first; promote to a hard fail once the baseline is clean.
-
-When the operator adds a new dependency, the skill confirms: (1) the version is pinned, (2) the lockfile is updated and committed, and (3) the dependency actually exists. LLM-recommended packages are occasionally hallucinations — catch them before they ship.
-
-## Branch strategy — GitHub Flow by default
-
-Most vibe-coder projects do not need `git-flow`. GitHub Flow is simpler, safer, and widely supported. Use it unless there's a specific reason not to:
-
-- **One long-lived branch**: `main`. Always deployable. Protected. No direct pushes after the first day.
-- **Short-lived feature branches**: `feature/<topic>`, `fix/<topic>`, `refactor/<topic>`, `chore/<topic>`, `docs/<topic>`, `hotfix/<topic>`. Lifetime: hours to days, never weeks.
-- **Merged via** pull request → review → squash or merge commit → delete the branch.
-- **Tags for releases** — optional for apps, recommended for libraries.
-
-The full discussion — when NOT to use GitHub Flow, what to do about inherited `dev` branches, staging environments, library maintainers with multiple major versions — lives in `references/branch-strategy.md`. Read it only if the operator has a specific reason to deviate from the default.
-
-## Directory layout — three quiet rules
-
-Directory structure is the most underrated form of documentation. A clean tree tells a cold reader (human or AI) what the project does in 30 seconds.
-
-Three cross-language rules the skill applies quietly:
-
-1. **Domain-first, type-second.** Group by feature (`auth/`, `billing/`), not by file type (`handlers/`, `services/`). Type-based layouts stop scaling around 20 domains.
-2. **No flat directory above ~15 files.** At the threshold, sub-group by intent or by date.
-3. **Names are predictions.** Every directory name should predict what's inside. Match the naming conventions the skill recommends — verbs for functions, nouns for types, `is_` / `has_` for booleans, `UPPER_SNAKE_CASE` for constants.
-
-The full naming table and structural-smell detection list is in `references/directory-layout.md`.
-
-## Path portability — the audit
-
-Every absolute path, IP literal, username, or platform separator in source is a time bomb. This sub-skill audits for them and offers one-line fixes.
-
-Core patterns to grep for: `C:\\`, `/Users/<name>`, `/home/<name>`, literal IPv4 addresses, `\\` in string literals, `/tmp/<specific>`. The full pattern-and-fix table with language-specific equivalents is in `references/path-portability.md`. When the audit finds more than a couple of files, hand off to `refactor-verify` for the 1:1 preservation work.
+**Secret-shaped entries to verify on every audit**: `.env`, `.env.*` (except `.env.example` / `.env.*.template`), `*.pem`, `*.key`, `id_rsa*`, `id_ed25519*`, `credentials*`, `secrets*`, `*.p12`, `*.pfx`, service-account JSON keys (`*-sa.json`, `*.credentials.json`).
 
 ## Lifecycle workflows — the "manage" part
 
@@ -257,8 +212,6 @@ Triggers: adding staging, spinning up a preview environment, onboarding a new de
 4. Boot the app against the new environment. Startup validation is the test — missing keys fail loud.
 5. Document the new environment in `CLAUDE.md` via `write-for-ai`: name, purpose, URL, who owns it, what it's safe to break.
 
----
-
 ## Output format — when asked a structural question
 
 Don't dump the entire skill. Answer the specific question in one paragraph and offer a concrete next step:
@@ -266,19 +219,16 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 **Operator:** *"Where should my DB password go?"*
 **You:** *"In `.env` for local dev, in your CI provider's secret store for production. Don't put it in source code or in `.env.example`. I can set up `.env.example` with `DATABASE_URL=__REPLACE_ME__` as a placeholder now — want me to?"*
 
-**Operator:** *"Should I make a dev branch?"*
-**You:** *"Probably not — GitHub Flow (just `main` with short-lived feature branches) is simpler for 95% of projects. What's driving the question?"*
-
-**Operator:** *"Dependabot is annoying, can I turn it off?"*
-**You:** *"You can pause it, but I'd recommend keeping it on at a monthly cadence. Most CVE exposure on small projects comes from ignored dependency updates. Want me to switch it to monthly?"*
+**Operator:** *"Is my `.env` safe?"*
+**You:** *"Checking. `.env` is gitignored ✅. `.env.example` has 8 keys, real `.env` has 10 — `STRIPE_KEY` and `SENTRY_DSN` are missing from the example. Want me to add them as `__REPLACE_ME__` placeholders?"*
 
 ## Things not to do
 
 - Don't offer multiple options when one is clearly better. Pick the default.
-- Don't teach git when the operator asked a branch question. Answer the branch question; they can learn git separately.
-- Don't silently change the existing layout. If the repo already has a specific structure, propose changes and wait for confirmation — `manage-config-env` is advisory, not autonomous.
+- Don't silently change the existing layout. If the repo already has a specific structure, propose changes and wait for confirmation.
 - Don't commit `.env`. Ever. If you see `.env` tracked in git, flag it immediately and hand off to `audit-security` for remediation.
 - Don't store secrets in `.env.example`. That file is committable; real secrets go in `.env`.
+- Don't touch non-secret conventions (branches, directory layout, dep pinning). Those live in `project-conventions`.
 
 ## Sweep mode — read-only audit
 
@@ -289,24 +239,35 @@ Instead, produce a findings-only report:
 - Four-bucket audit: are values in the right place? Any secrets in source, any constants in env vars that should be in code, any production secrets sitting in `.env`?
 - `.env.example` drift: does every key in `.env` have a matching entry in `.env.example`? Any `__REPLACE_ME__` placeholders still live in a real environment?
 - `.gitignore` coverage: is `.env` actually ignored? Any `*.pem`, `id_rsa`, `credentials*` files missing?
-- Dependency pinning: unpinned prod dependencies, missing lockfile, unused packages in the manifest.
-- Branch strategy: does the repo deviate from GitHub Flow, and if so, is the deviation documented?
-- Hardcoded path audit: absolute paths, literal IPs, username references in source.
-- Stoplight verdict: 🟢 config layout is clean / 🟡 drift or minor hygiene gaps / 🔴 committed secrets, missing `.gitignore` entries, or other incident-class findings.
-- A one-line "fix with" pointer indicating `/manage-config-env` will apply the scaffolds or run the lifecycle workflow when invoked directly.
+- Tracked secrets: any secret-shaped files already in `git ls-files`? (These are incident-class — flag immediately and hand off to `audit-security`.)
+- Stoplight verdict: 🟢 secrets layout is clean / 🟡 drift or minor hygiene gaps / 🔴 committed secrets, missing `.gitignore` entries, or other incident-class findings.
+- A one-line "fix with" pointer indicating `/manage-secrets-env` will apply the scaffolds or run the lifecycle workflow when invoked directly.
 
-The operator reviews the sweep report and, if they want the fixes applied, invokes `/manage-config-env` directly — which then runs the full opinionated procedure.
+The operator reviews the sweep report and, if they want the fixes applied, invokes `/manage-secrets-env` directly — which then runs the full opinionated procedure.
 
 How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
+
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"* / *"厳しめ"*), switch output rules:
+
+- **Lead with the worst finding**, not the four-bucket audit. If `.env` is tracked in git or a secret is in source, that's the first line of the report with file and line.
+- **No softening words.** Drop *"could be"*, *"might"*, *"consider"*, *"you may want to"*, *"probably fine"*. Replace with blast-radius framing: *"your Stripe key is in `src/config.ts:14` and is readable by anyone who clones this repo"*, not *"potential secret exposure in config.ts"*.
+- **Tracked secrets get incident language.** If `git ls-files` returns a secret-shaped file, the first line is *"Stop. Rotate the credential now. Handing off to `audit-security` incident runbook."* No preamble.
+- **Drift findings get action verbs.** Balanced mode says *"`STRIPE_KEY` is missing from `.env.example`"*. Harsh mode says *"add `STRIPE_KEY=__REPLACE_ME__` to `.env.example` now — the next collaborator will clone a broken app."*
+- **No *"mostly fine"* closures** when any finding is HIGH or CRITICAL. *"Don't ship until `.env` is untracked and `.gitignore` covers `*.pem`"*, not *"a couple of hygiene items to watch"*.
+- **Stoplight stays literal.** Harsh mode does not inflate 🟡 to 🔴 — it tightens framing, not severity.
+
+Harsh mode does not invent findings, fabricate severities, or become rude. Every harsh statement must still cite the same file, line, or `git ls-files` match the balanced version would cite. The change is framing, not substance.
 
 ## Hand-offs
 
 - Secrets already committed to git → `audit-security` immediately for blast-radius assessment, then run the *Rotate a secret* workflow above as the incident path.
-- Branch strategy conflict with existing maintainer convention → respect the maintainer; use `write-for-ai` to document the existing convention in `CLAUDE.md`.
 - Dependency audit finds CVEs → `audit-security` for severity, `refactor-verify` for the upgrade diff.
 - Config refactoring across many files (e.g., *Migrate between buckets* touching dozens of call sites) → `refactor-verify` for the 1:1 preservation and symbol-level proof.
 - A new env var needs to appear in README / `CLAUDE.md` env-var table → `write-for-ai` with the key, one-line purpose, and default or placeholder value.
 - Dead code found during the *Remove* workflow → `fight-repo-rot` to confirm, then `refactor-verify` to delete safely.
+- Branch strategy, directory layout, dep pinning, hardcoded path audits → `project-conventions`, which owns those lower-stakes conventions.
 
 ## References and templates
 
@@ -314,10 +275,6 @@ How to tell: the task context from the umbrella will include a `sweep=read-only`
 - `references/startup-validation.md` — Python / Node / Go patterns for refusing to start on unfilled `__REPLACE_ME__`
 - `references/secret-rotation.md` — provider-specific rotation recipes (AWS IAM, GCP SA keys, Stripe, OpenAI, DB users, JWT signing, OAuth)
 - `references/lifecycle-workflows.md` — deep dive on add / update / rotate / remove / migrate / audit / provision with edge cases
-- `references/branch-strategy.md` — when NOT to use GitHub Flow, inherited `dev` branches, release branches
-- `references/directory-layout.md` — full naming table and structural-smell detection
-- `references/path-portability.md` — pattern-and-fix table with language-specific equivalents
 - `templates/.env.example.template` — starter `.env.example` with `__REPLACE_ME__` placeholders
 - `templates/.gitignore.template` — comprehensive default `.gitignore`
-- `templates/dependabot.yml.template` — starter dependency-update config
 - `scripts/check-env-drift.sh` — pre-commit-friendly script that fails if `.env` and `.env.example` key sets diverge

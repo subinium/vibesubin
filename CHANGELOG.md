@@ -4,6 +4,57 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-04-15
+
+### Added
+
+- `manage-secrets-env` skill — secrets-and-env slice of the former `manage-config-env`. Owns the four-bucket decision tree, `.env` / `.env.example` rules, startup validation, drift check, build-time vs runtime env vars, `.env` precedence, `.gitignore` default-safe template, and the full secret lifecycle (add / update / rotate / remove / migrate / audit drift / provision new environment).
+- `project-conventions` skill — conventions slice of the former `manage-config-env`. Owns dependency versioning, GitHub Flow branch strategy, directory layout, path portability audit.
+- `manage-assets` skill — diagnosis-only bloat scan. Detects large files in the working tree (>10 MB, >50 MB, >100 MB tiers), large blobs in git history, LFS migration candidates, asset-directory growth, duplicate binaries. Never deletes, never rewrites history. Hands off to `refactor-verify` for destructive operations, to `manage-secrets-env` for `.gitignore` gaps, to `fight-repo-rot` for unused assets.
+- `unify-design` skill — web-dev design-system auditor and token extractor. Detects the framework (Tailwind v3, Tailwind v4, CSS Modules, styled-components, Emotion, Material UI, Chakra UI, vanilla CSS), establishes the tokens file as the BI source of truth (scaffolds one if missing with opinionated spacing/typography/radius/shadow scales and operator-filled palette slots), audits for drift (hardcoded hex/rgb/oklch outside tokens, arbitrary Tailwind values like `w-[432px]`, inline style objects, duplicate Button/Card/Nav/Logo components, near-match colors), and fixes drift by extracting values to tokens. Multi-file component consolidations hand off to `refactor-verify`. Includes `references/token-scaffolds.md` with framework-specific starter tokens files.
+- "Objectivity — no exaggeration, no marketing" section in `write-for-ai/SKILL.md`. Eight rules: no unbacked adjectives, no superlatives without comparison, no marketing metaphors, no weasel hedging, verification command required on every capability claim, numbers are specific or absent, status flags are load-bearing, no self-congratulation. Enforced via a new checklist item in the mandatory self-review.
+- "Harsh mode — no hedging" sections in `refactor-verify/SKILL.md`, `setup-ci/SKILL.md`, `write-for-ai/SKILL.md`, `manage-secrets-env/SKILL.md`, `project-conventions/SKILL.md`, `manage-assets/SKILL.md`, `unify-design/SKILL.md`. Every specialist that can receive the `tone=harsh` marker now implements the switch.
+- "Test rot" section in `fight-repo-rot/SKILL.md` — dead tests, obsolete fixtures, snapshot rot, skipped-tests older than 6 months, hardcoded sleeps inside tests, oversized test files / functions. Test-rot deletions hand off to `refactor-verify` with the same HIGH/MEDIUM/LOW confidence framing.
+- `docs/PHILOSOPHY.md` — pack invariants in seven rules.
+
+### Changed
+
+- Skill `plugins/vibesubin/skills/manage-config-env/` split into `manage-secrets-env/` and `project-conventions/`. The `manage-config-env` directory no longer exists.
+- Reference `manage-config-env/references/secrets-cli.md` moved to `manage-secrets-env/references/secrets-cli.md`.
+- Reference `manage-config-env/references/startup-validation.md` moved to `manage-secrets-env/references/startup-validation.md`.
+- Reference `manage-config-env/references/secret-rotation.md` moved to `manage-secrets-env/references/secret-rotation.md`.
+- Reference `manage-config-env/references/lifecycle-workflows.md` moved to `manage-secrets-env/references/lifecycle-workflows.md`.
+- Script `manage-config-env/scripts/check-env-drift.sh` moved to `manage-secrets-env/scripts/check-env-drift.sh`.
+- Template `manage-config-env/templates/.env.example.template` moved to `manage-secrets-env/templates/.env.example.template`.
+- Template `manage-config-env/templates/.gitignore.template` moved to `manage-secrets-env/templates/.gitignore.template`.
+- Reference `manage-config-env/references/branch-strategy.md` moved to `project-conventions/references/branch-strategy.md`.
+- Reference `manage-config-env/references/directory-layout.md` moved to `project-conventions/references/directory-layout.md`.
+- Reference `manage-config-env/references/path-portability.md` moved to `project-conventions/references/path-portability.md`.
+- Template `manage-config-env/templates/dependabot.yml.template` moved to `project-conventions/templates/dependabot.yml.template`.
+- `vibesubin/SKILL.md` scope-confirmation sentence: "six checks in parallel — refactor safety, security, repo rot, docs, CI setup, and config/env/branch conventions" → "eight checks in parallel — refactor safety, security, repo rot, docs, CI setup, secrets/env, project conventions, and repo bloat".
+- `vibesubin/SKILL.md` "Run all six sub-skills" → "Run all eight sub-skills".
+- `vibesubin/SKILL.md` "Two specialists (`fight-repo-rot`, `audit-security`) are pure-diagnosis by default" → "Three specialists (`fight-repo-rot`, `audit-security`, `manage-assets`) are pure-diagnosis by default. The other five (`refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`) rely on the `sweep=read-only` marker."
+- `vibesubin/SKILL.md` parallel launch block: `manage-config-env` entry replaced with three entries — `manage-secrets-env`, `project-conventions`, `manage-assets`.
+- `vibesubin/SKILL.md` routing decision tree: single `manage-config-env` branch split into three branches — `manage-secrets-env` (`.env`, secret, rotate, gitignore, api key), `project-conventions` (branch, dependency, folder structure, hardcoded path), `manage-assets` (repo is huge, big files, LFS, bloat).
+- `vibesubin/SKILL.md` router example "I pushed my .env to github" hand-off updated from `manage-config-env` to `manage-secrets-env`.
+- `vibesubin/SKILL.md` "What ran" report section: 6 rows → 8 rows.
+- `vibesubin/SKILL.md` time-estimate phrasing removed from umbrella reports: "a couple of minutes" (scope confirmation), "get results in minutes, not an hour" (launch rationale), "Est. time" report-table column, "20 min" / "2–3 hours" / "30 min + rotate" example rows, "20 minutes" recommended-order example, "takes minutes" in Things Not To Do. Replaced with qualitative size buckets (S/M/L) in the prioritized fix-list table.
+- Cross-reference `manage-config-env` → `manage-secrets-env` applied in: `audit-security/SKILL.md` (tracked `.env` hand-off, incident runbook `.gitignore` hand-off), `setup-ci/SKILL.md` (deploy-touches-config hand-off), `write-for-ai/SKILL.md` (documenting-env hand-off).
+- Cross-reference `manage-config-env` → `project-conventions` applied in: `fight-repo-rot/SKILL.md` (hardcoded-path hand-off in main text and hand-off summary), `refactor-verify/SKILL.md` (config-touching-changes integration note, split between secrets-env and project-conventions), `setup-ci/SKILL.md` (new hand-off entry for branch-strategy and dep-pinning concerns).
+- `fight-repo-rot/SKILL.md` hand-off summary adds explicit routes for dead-test / obsolete-fixture findings (→ `refactor-verify`) and oversized-binary findings (→ `manage-assets`).
+- `README.md` "Today's lineup" table: 6 rows → 8 rows. `manage-config-env` row replaced with `manage-secrets-env`, `project-conventions`, `manage-assets` rows.
+- `README.md` "Two skills never edit" phrasing → "Three skills never edit" (adds `manage-assets` alongside `fight-repo-rot` and `audit-security`).
+- `README.md` direct-call list: `/manage-config-env` replaced with `/manage-secrets-env` and `/project-conventions`.
+- `README.md` § 6 heading `manage-config-env` replaced with three new headings: § 6 `manage-secrets-env`, § 7 `project-conventions`, § 8 `manage-assets`. Old § 6 description removed.
+- `README.md` "Workflows that come up often": "Onboarding to a new repo" and "Starting from scratch" bullets updated to reference `manage-secrets-env` and `project-conventions`; new "Why is my repo so big?" bullet references `manage-assets` and `refactor-verify`.
+- Plugin version `0.2.0` → `0.3.0` in `.claude-plugin/marketplace.json`; description updated for 9-skill lineup (refactor verification, security, repo rot, AI-friendly docs, CI, secrets lifecycle, project conventions, repo bloat, design unification).
+- Plugin version `0.1.0` → `0.3.0` in `plugins/vibesubin/.claude-plugin/plugin.json`. `plugin.json` was previously stuck at `0.1.0` while `marketplace.json` had already advanced to `0.2.0`. Description updated for 9-skill lineup.
+- `README.ko.md`, `README.ja.md`, `README.zh.md` rewritten end-to-end for 0.3.0 structure: 9-skill table, new §§ 6-9 (`manage-secrets-env`, `project-conventions`, `manage-assets`, `unify-design`), new "three skills never edit" phrasing (was "two"), new "objectivity — no exaggeration" principle in `write-for-ai` and Philosophy sections, new workflow bullets for bloat and design drift. Natural-voice translations in each target language, not literal word-for-word.
+
+### Fixed
+
+- `MAINTENANCE.md` referenced `docs/PHILOSOPHY.md` in the "future AI sessions should read this file" ordered list, but the file did not exist. Target file now present.
+
 ## [0.2.0] — 2026-04-15
 
 ### Added
@@ -53,6 +104,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - Install paths: Claude Code marketplace, `skills.sh`, manual symlink.
 - READMEs: EN / KO / JA / ZH.
 
-[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/subinium/vibesubin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/subinium/vibesubin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/subinium/vibesubin/releases/tag/v0.1.0

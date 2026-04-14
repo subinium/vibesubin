@@ -314,11 +314,24 @@ The operator reviews the sweep report and, if they want a specific refactor appl
 
 How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
 
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"* / *"厳しめ"*), switch output rules on both the sweep audit and the direct-invocation report:
+
+- **Lead with the baseline verdict.** First line of the report is whether the project is in a green baseline (refactor-safe) or red (cannot verify anything on top). No preamble.
+- **Pass/fail verdicts are binary.** Drop *"mostly passing"*, *"almost green"*, *"a couple of flakes"*. A refactor is done or not done. If three of four verification passes succeeded and the fourth didn't, the change is **not done** — say so in one sentence.
+- **Direct attribution on every failure.** *"`src/api/user.ts::getUser` is referenced 12 times but only 11 were updated. The one missed call site is `tests/api/user.test.ts:47`."* Not *"some call sites may still reference the old name."*
+- **No *"verification is strongly recommended"* hedging.** The pack's entire premise is that verification is mandatory. Harsh mode restates this as a refusal: *"Refusing to report done — the test suite did not run because the worktree was not bootstrapped."* Not *"you may want to run the tests first."*
+- **Dead-code deletions are direct.** Balanced mode says *"candidate for removal, confirm the LSP reference count first"*. Harsh mode says *"LSP returns zero references, grep returns zero references — delete it."*
+- **Call-site closure mismatches are escalations.** If the old-count and new-count don't match, harsh mode frames it as a bug-in-the-refactor, not a note-for-later. *"The rename is incomplete. Do not merge this PR."*
+
+Harsh mode does not invent failures, skip verification steps, or become rude. Every harsh statement must cite the same symbol count, grep output, or test result the balanced version would cite. The change is framing, not substance.
+
 ## Integration with other vibesubin skills
 
 - **Input from `fight-repo-rot`** — dead-code findings (with confidence) come in here as delete-dead jobs. The handoff includes the list of symbols and the confidence level; LOW-confidence deletions require an explicit operator OK.
 - **Output to `write-for-ai`** — hand off the commit and PR writing; `write-for-ai` knows how to document verification results.
-- **Config-touching changes** — coordinate with `manage-config-env` on where new config values should live before restructuring.
+- **Config-touching changes** — coordinate with `manage-secrets-env` (if the change touches secrets, `.env`, or `.gitignore`) or `project-conventions` (if the change is about branch strategy, directory layout, dep pinning, or path portability) on where new values should live before restructuring.
 - **Security-sensitive changes** — auth, crypto, input handling; run `audit-security` on the result.
 
 ## Language-agnostic core, language-specific tooling

@@ -314,9 +314,23 @@ The operator reviews the sweep report and, if they want the fixes applied, invok
 
 How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit instruction like "produce findings only, do not edit". If that's present, never write. If the operator invokes this skill by name (`/setup-ci`), the full procedure applies and editing is expected.
 
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"* / *"厳しめ"*), switch output rules on the CI audit report:
+
+- **Lead with the worst safety gap.** First line is the single most dangerous issue — *"`GITHUB_TOKEN` has write-all on every workflow in this repo"*, *"no pinned action SHAs, every `uses:` line is a moving target"*, *"`.github/workflows/deploy.yml` echoes `$DEPLOY_KEY` in a run step — rotate that key and fix the workflow"*. No preamble.
+- **No softening on supply-chain issues.** Drop *"consider pinning"*, *"might be a good idea"*, *"you may want to add"*. Replace with *"pin every third-party action to a SHA before your next commit — tags can be moved silently"*.
+- **Missing permissions blocks are an immediate finding, not a nice-to-have.** Balanced mode says *"no top-level `permissions:` block"*. Harsh mode says *"every job in this workflow gets a write-scoped `GITHUB_TOKEN` by default — this is the #1 supply-chain risk on GitHub Actions. Add `permissions: contents: read` now."*
+- **Manual-deploy suggestions become directives.** *"Do not automate the deploy until the manual path works"* — not *"it's usually a good idea to confirm the manual path first."*
+- **First-run warnings are absolute.** Harsh mode refuses to generate a deploy workflow without `workflow_dispatch` for the first run, and says so in one sentence.
+- **No *"you're mostly set up"* closures when real safety gaps exist.** If the repo has any unpinned third-party action, any write-scoped token, or any echoed secret, the verdict line does not end with reassurance.
+
+Harsh mode does not invent findings, exaggerate CVE severity, or become rude. Every harsh statement must cite the same workflow file, job name, or secret reference the balanced version would cite. The change is framing, not substance.
+
 ## Hand-offs
 
-- Deploy touches config files → `manage-config-env` for the `.env` pattern
+- Deploy touches `.env` or secrets → `manage-secrets-env` for the `.env` pattern and lifecycle
+- Deploy touches branch strategy, dep pinning, or directory layout → `project-conventions`
 - Deploy leaks secrets → `audit-security` immediately
 - Deploy breaks and touches production code → `refactor-verify` for the fix
 

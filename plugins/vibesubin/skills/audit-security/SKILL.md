@@ -275,7 +275,7 @@ Hand the file off to `write-for-ai` to format. This file is for future AI sessio
 
 Add these guards before closing the incident:
 
-- `.gitignore` entries for every secret file type (hand off to `manage-config-env`)
+- `.gitignore` entries for every secret file type (hand off to `manage-secrets-env`)
 - Pre-commit hook that runs `audit-security` (or at minimum a secrets-scanning step like `gitleaks`) on every commit
 - Branch protection on `main` so no one can force-push again
 - Secret-scanning enabled on the hosting provider (GitHub Secret Scanning, GitLab push rules, etc.)
@@ -315,7 +315,7 @@ Harsh mode does not invent findings, fabricate CVSS scores, or become rude. Ever
 ## Hand-offs
 
 - Critical findings involving refactoring sensitive code → hand off to `refactor-verify` for the fix
-- Tracked `.env` files → hand off to `manage-config-env` for the remediation pattern (rotate, remove from history, add to gitignore, re-examine collaborators)
+- Tracked `.env` files → hand off to `manage-secrets-env` for the remediation pattern (rotate, remove from history, add to gitignore, re-examine collaborators)
 - Issues in CI/CD pipeline secrets → hand off to `setup-ci`
 - Repo-rot-adjacent findings (stale dependencies, unused libraries with CVEs) → hand off to `fight-repo-rot`
 

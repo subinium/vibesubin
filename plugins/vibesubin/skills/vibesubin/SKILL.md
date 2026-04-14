@@ -96,17 +96,17 @@ Harsh mode is **not** about being rude, exaggerating, or inventing findings. It 
 
 Before running, confirm once:
 
-> *"Running the full vibesubin sweep on this repo. That's six checks in parallel — refactor safety, security, repo rot, docs, CI setup, and config/env/branch conventions. It'll take a couple of minutes and produce one prioritized report at the end. Sound good?"*
+> *"Running the full vibesubin sweep on this repo. That's nine checks in parallel — refactor safety, security, repo rot, docs, CI setup, secrets/env, project conventions, repo bloat, and design unification. Read-only — nothing gets edited until you approve items from the report. Sound good?"*
 
 If the operator says yes, proceed. If they want to narrow the scope (one directory, one file, one area), adjust before launching.
 
 ### Step 2 — Launch the six specialists in parallel, all in read-only mode
 
-Run all six sub-skills as **parallel task agents** (or parallel subagents, depending on the host framework). Do not serialize. The whole point of this command is that the operator gets results in minutes, not an hour.
+Run all nine sub-skills as **parallel task agents** (or parallel subagents, depending on the host framework). Do not serialize. Parallelism is load-bearing — sequential execution defeats the whole purpose of the command.
 
 **Read-only mode is enforced by the launch instruction itself.** Every specialist task MUST begin with the exact token `sweep=read-only` followed by "produce findings only, do not edit any files, do not run lifecycle workflows." Each specialist has a matching "Sweep mode — read-only audit" section in its SKILL.md that checks for this marker and switches to audit-only output. If a specialist does not see the marker, it will default to its full edit-capable behavior, which is incorrect for a sweep.
 
-Two specialists (`fight-repo-rot`, `audit-security`) are pure-diagnosis by default and edit nothing regardless of the marker. The other four (`refactor-verify`, `setup-ci`, `write-for-ai`, `manage-config-env`) rely on this marker to stay read-only. Do not launch any of them without it.
+Three specialists (`fight-repo-rot`, `audit-security`, `manage-assets`) are pure-diagnosis by default and edit nothing regardless of the marker. The other six (`refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design`) rely on this marker to stay read-only. Do not launch any of them without it.
 
 Parallel launch targets (the `sweep=read-only` prefix is mandatory — copy it into every task description verbatim):
 
@@ -140,12 +140,35 @@ parallel {
                           Report what exists, what's missing, what's broken,
                           with the stoplight verdict."
 
-  manage-config-env    → "sweep=read-only — produce findings only, do not
+  manage-secrets-env   → "sweep=read-only — produce findings only, do not
                           scaffold or edit any config files, do not run any
                           lifecycle workflow (rotate/remove/migrate/provision).
-                          Audit four-bucket placement, .env drift, .gitignore
-                          coverage, dependency pinning, branch strategy, and
-                          hardcoded paths. Report deviations with stoplight."
+                          Audit four-bucket placement, .env drift, secret-shaped
+                          .gitignore coverage, tracked-secret files. Report
+                          deviations with stoplight. Any tracked secret is an
+                          immediate hand-off to audit-security."
+
+  project-conventions  → "sweep=read-only — produce findings only, do not
+                          scaffold or edit any files. Audit branch strategy
+                          vs GitHub Flow, dependency pinning and lockfile
+                          presence, directory layout smells, hardcoded absolute
+                          paths and portability bugs. Report deviations with
+                          stoplight."
+
+  manage-assets        → "sweep=read-only — produce diagnosis only, never edit.
+                          Scan for large files in the working tree (>10 MB),
+                          large blobs in git history, LFS migration candidates,
+                          asset-directory growth, duplicate binaries. Report
+                          top offenders with size, severity, and hand-off."
+
+  unify-design         → "sweep=read-only — produce findings only, do not
+                          scaffold any tokens file, do not edit any component.
+                          Detect the framework (Tailwind v3/v4, CSS Modules,
+                          styled-components, MUI, Chakra, vanilla), identify
+                          the BI source of truth (or flag its absence), audit
+                          for hardcoded hex/rgb, arbitrary Tailwind values,
+                          magic px/rem numbers, duplicate Button/Card/Nav/Logo
+                          components. Report drift by file with hotspots."
 }
 ```
 
@@ -173,26 +196,31 @@ When all six specialists return, merge their findings into a single prioritized 
 <One paragraph, warm tone, honest summary. "Your repo is in decent shape but
 three things stand out..." or "There are four things I'd fix before you ship
 the next release..." or "Honestly, this looks clean — here are two small
-polish items if you have 20 minutes.">
+polish items.">
 
 ## What ran
 
-Six skills in parallel. Each one's full report is in the section below.
+Nine skills in parallel. Each one's full report is in the section below.
 
 - refactor-verify:      <green | yellow | red> — <one-line summary>
 - audit-security:       <green | yellow | red> — <one-line summary>
 - fight-repo-rot:       <green | yellow | red> — <one-line summary>
 - write-for-ai:         <green | yellow | red> — <one-line summary>
 - setup-ci:             <green | yellow | red> — <one-line summary>
-- manage-config-env:    <green | yellow | red> — <one-line summary>
+- manage-secrets-env:   <green | yellow | red> — <one-line summary>
+- project-conventions:  <green | yellow | red> — <one-line summary>
+- manage-assets:        <green | yellow | red> — <one-line summary>
+- unify-design:         <green | yellow | red> — <one-line summary>
 
 ## Prioritized fix list (top 10)
 
-| # | File / area | What | Severity | Fix with | Est. time |
+Size bucket: **S** = quick win (single file, under an hour), **M** = multi-file or careful (rest of a day), **L** = multi-session (refactor, coordinated change, history rewrite).
+
+| # | File / area | What | Severity | Fix with | Size |
 |---|---|---|---|---|---|
-| 1 | src/api/user.ts:187 | SQL injection in `get_user_by_email` | CRITICAL | audit-security → refactor-verify | 20 min |
-| 2 | src/api/user.ts (whole file) | Hotspot: 870 LOC, 18 CCN, 47 commits / 6mo | HIGH | refactor-verify | 2–3 hours |
-| 3 | .env committed in git history | Secret exposure | CRITICAL | audit-security → manage-config-env | 30 min + rotate |
+| 1 | src/api/user.ts:187 | SQL injection in `get_user_by_email` | CRITICAL | audit-security → refactor-verify | S |
+| 2 | src/api/user.ts (whole file) | Hotspot: 870 LOC, 18 CCN, 47 commits / 6mo | HIGH | refactor-verify | L |
+| 3 | .env committed in git history | Secret exposure | CRITICAL | audit-security → manage-secrets-env | M |
 | ... |
 
 ## By specialist
@@ -207,7 +235,7 @@ Six skills in parallel. Each one's full report is in the section below.
 
 ## Recommended order of operations
 
-1. **Fix #1 first** — it's a critical security issue and takes 20 minutes
+1. **Fix #1 first** — it's a critical security issue and it's a quick win (size S)
 2. **Rotate exposed secrets in #3** — concurrently, since no code change needed
 3. **Then tackle #2** — the hotspot — because fixing #1 there ties into the split
 4. ...
@@ -280,8 +308,19 @@ User request
 ├── Contains "CI" / "deploy" / "GitHub Actions" / "workflow" / "automate deploy"
 │   → setup-ci
 │
-├── Contains ".env" / "secret" / "branch" / "main or dev" / "config" / "gitignore"
-│   → manage-config-env
+├── Contains ".env" / "secret" / "rotate" / "gitignore" / "api key"
+│   → manage-secrets-env
+│
+├── Contains "branch" / "main or dev" / "dependency" / "dependabot" / "folder structure" / "hardcoded path"
+│   → project-conventions
+│
+├── Contains "repo is huge" / "big files" / "LFS" / "binary in git" / "bloat"
+│   → manage-assets
+│
+├── Contains "design system" / "unify" / "match the brand" / "too many hardcoded"
+│      / "why do these pages look different" / "extract to tokens"
+│      / "브랜드 일관성" / "디자인 통일"
+│   → unify-design
 │
 ├── Contains "full check" / "run vibesubin" / "vibe check" / "everything"
 │   → MODE 1 (full sweep)
@@ -301,13 +340,13 @@ User request
 
 **User:** *"my whole repo is a mess and I don't know where to start"* → This is the command mode signal even without `/vibesubin`. Offer: *"I can run the full vibesubin sweep — all six skills in parallel, one prioritized report at the end. Want me to?"*
 
-**User:** *"I pushed my .env to github"* → Immediate `audit-security` + `manage-config-env` tandem. Don't route through the umbrella; the urgency is specific.
+**User:** *"I pushed my .env to github"* → Immediate `audit-security` + `manage-secrets-env` tandem. Don't route through the umbrella; the urgency is specific.
 
 ---
 
 ## Things not to do
 
-- **Don't run mode 1 without confirming.** The full sweep takes minutes and produces a lot of output. Confirm scope first.
+- **Don't run mode 1 without confirming.** The full sweep produces a lot of output. Confirm scope first.
 - **Don't run mode 1 serially.** The whole point is parallelism. If the host framework doesn't support parallel task agents, warn the operator that it'll be slower and proceed sequentially.
 - **Don't have mode 1 make changes.** It's read-only. The operator approves the fix list; the specialists apply fixes.
 - **Don't force mode 1 on a specific request.** If the operator clearly wants one thing (`"fix this SQL injection"`), route to the specialist. Don't up-sell the full sweep.

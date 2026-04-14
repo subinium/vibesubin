@@ -38,9 +38,9 @@ What it is **not**: not a SaaS (nothing leaves your machine), not a compliance t
 This is the thing to get straight early. There are two ways to use the plugin, and they behave very differently.
 
 - **Sweep mode (`/vibesubin`).** Every skill runs in parallel, *read-only*. They produce findings, not fixes. Nothing in your repo changes until you approve items from the report. This is the "I want an honest second opinion" mode.
-- **Direct call (`/refactor-verify`, `/setup-ci`, `/write-for-ai`, `/manage-config-env`).** The skill does its full job, which includes editing files. `refactor-verify` rewrites your code across the dependency tree. `setup-ci` drops working YAML into `.github/workflows/`. `write-for-ai` edits your README. `manage-config-env` scaffolds `.env.example`, `.gitignore`, and touches config files. These are the "do the work" modes.
+- **Direct call (`/refactor-verify`, `/setup-ci`, `/write-for-ai`, `/manage-secrets-env`, `/project-conventions`, `/unify-design`).** The skill does its full job, which includes editing files. `refactor-verify` rewrites your code across the dependency tree. `setup-ci` drops working YAML into `.github/workflows/`. `write-for-ai` edits your README. `manage-secrets-env` scaffolds `.env.example`, `.gitignore`, and runs the full secret lifecycle. `project-conventions` scaffolds Dependabot, enforces pinning, fixes hardcoded paths. `unify-design` scaffolds the tokens file and rewrites components to reference it. These are the "do the work" modes.
 
-Two skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions) and **`audit-security`** (static triage report only). Everything else is a real worker skill when called directly, and a read-only reporter when invoked via the sweep.
+Three skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions), **`audit-security`** (static triage report only), and **`manage-assets`** (bloat report only — never rewrites history, never deletes files). Everything else — `refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design` — is a real worker skill when called directly, and a read-only reporter when invoked via the sweep.
 
 ### Today's lineup
 
@@ -48,10 +48,13 @@ Two skills never edit regardless of how you call them: **`fight-repo-rot`** (pur
 |---|---|---|
 | [`refactor-verify`](#1-refactor-verify) | *"rename this class"*, *"split this file"*, *"delete this dead code safely"* | A planned change — refactor, rename, split, or delete — executed bottom-up, with four verification passes before it calls itself done |
 | [`audit-security`](#2-audit-security) | *"any secrets leaked?"*, *"is this safe?"* | A short triaged list of real findings with file and line, instead of a 500-line PDF |
-| [`fight-repo-rot`](#3-fight-repo-rot) | *"find dead code"*, *"what can I delete?"* | Dead code tagged HIGH / MEDIUM / LOW confidence, plus god files, hotspots, and hardcoded paths. Pure diagnosis — never edits |
-| [`write-for-ai`](#4-write-for-ai) | *"write a README / commit / PR"* | Docs the *next* AI session can actually read |
+| [`fight-repo-rot`](#3-fight-repo-rot) | *"find dead code"*, *"what can I delete?"* | Dead code tagged HIGH / MEDIUM / LOW confidence, plus god files, hotspots, hardcoded paths, and test rot. Pure diagnosis — never edits |
+| [`write-for-ai`](#4-write-for-ai) | *"write a README / commit / PR"* | Docs the *next* AI session can actually read — and no unbacked marketing adjectives |
 | [`setup-ci`](#5-setup-ci) | *"set up deploy"*, *"push to deploy"* | Working GitHub Actions workflows plus a plain-language walkthrough |
-| [`manage-config-env`](#6-manage-config-env) | *"where does this secret go?"* | One opinionated answer with a one-line reason |
+| [`manage-secrets-env`](#6-manage-secrets-env) | *"where does this secret go?"*, *"is my `.env` leaking?"* | One opinionated answer with a one-line reason, plus the full secret lifecycle |
+| [`project-conventions`](#7-project-conventions) | *"main or dev branch?"*, *"should I pin this dep?"*, *"hardcoded path?"* | One default per decision — GitHub Flow, pinned deps, domain-first layout, no home-dir in source |
+| [`manage-assets`](#8-manage-assets) | *"my repo is huge"*, *"should I use LFS?"* | Bloat report — large files, big blobs in git history, LFS candidates. Pure diagnosis — never rewrites history |
+| [`unify-design`](#9-unify-design) | *"unify the buttons"*, *"these pages look different"*, *"extract these colors to tokens"* | A design-system audit — scaffolds the tokens file if missing, finds every hardcoded hex and magic px, consolidates duplicate components |
 
 New skills drop into `plugins/vibesubin/skills/` and are picked up by `/vibesubin` automatically.
 
@@ -169,13 +172,39 @@ The skill starts by explaining the concepts in plain language — what a runner 
 
 Two things it won't do on purpose: it won't add Secrets for you (Secrets live in the GitHub UI; the skill tells you which ones and what they contain, but never handles credentials itself), and it won't guess your host.
 
-### 6. `manage-config-env`
+### 6. `manage-secrets-env`
 
-Every non-developer setting up a new project has to pick between `main` and `dev`, between committing `.env` and not, between a config file and environment variables, between `feature/` and `feat/`. Each decision is a tax, and most don't need one — 95% of projects are fine with the same defaults. `manage-config-env` pre-picks them, explains each in one sentence, and gets out of the way.
+Secrets are the high-stakes slice of "where does this value go" — a misplaced credential is an incident, not a style preference. `manage-secrets-env` owns that slice: the four-bucket decision tree (source constant / env var / local `.env` / CI secret store), the `.env.example` ↔ `.env` drift check, the default-safe `.gitignore` template, and the full lifecycle (add / update / rotate / remove / migrate / audit drift / provision a new environment).
 
-The defaults, shortest form: constants that never change at runtime go in code; local-only secrets go in `.env` with a committed `.env.example`; production secrets go in GitHub Secrets; runtime config changes between environments as environment variables; branches follow GitHub Flow; `.gitignore` ships pre-filled with the usual suspects. Ask for a reason and you get one line.
+Defaults, shortest form: constants that never change at runtime go in code; local-only secrets go in `.env` with a committed `.env.example`; production secrets go in your CI provider's secret store; runtime config changes between environments as environment variables; `.gitignore` ships with every secret-shaped entry pre-filled.
 
-Starting a new project, it can scaffold `.env.example`, `.gitignore`, and a branch-strategy note. On an existing project it audits what's there and flags mismatches — without silently rewriting your conventions.
+On a new project it scaffolds `.env.example`, `.gitignore`, and startup validation. On an existing one it audits what's there, flags tracked-secret files as incident-class findings, and hands off to `audit-security` when something has already leaked.
+
+### 7. `project-conventions`
+
+The lower-stakes companion to `manage-secrets-env`. Every project has structural decisions that aren't about secrets: main-or-dev branch, pinned-or-floating dependencies, domain-or-type directory layout, absolute-path bugs creeping into source. Most of those have one answer that works for 95% of projects, and picking that answer should not be a session-long conversation.
+
+Defaults: GitHub Flow (`main` plus short-lived feature branches, no `dev`), exact-pinned production dependencies with a committed lockfile, Dependabot or Renovate on a monthly cadence, domain-first directory layout, no absolute paths in source. Every rule has a one-sentence reason.
+
+On a new project it scaffolds `dependabot.yml` and a branch-strategy note. On an existing one it audits branch deviations, unpinned dependencies, directory smells, and hardcoded paths — and hands off multi-file fixes to `refactor-verify` so nothing gets rewritten without a verification pass.
+
+### 8. `manage-assets`
+
+A bloat detector, not a code analyzer. Repos get slow from binaries — a 300 MB SQLite checked in last year, a `dist/` directory that snuck past `.gitignore`, a tracked `.psd` that really wanted to be LFS. `manage-assets` surfaces that weight: file sizes in the working tree, git-history blob sizes (the invisible ones), LFS migration candidates, asset-directory growth, duplicate binaries.
+
+This skill is **diagnosis-only**. It never deletes a file, never rewrites history, never runs `git filter-repo` or `git lfs migrate`. When the operator approves a removal, the work hands off to `refactor-verify` (which owns verification for destructive operations like history rewrites), or to `manage-secrets-env` if the finding is `.gitignore`-shaped, or to `fight-repo-rot` if the asset is also unreferenced.
+
+It pairs especially well with open-sourcing — the first clone on a slow connection is a blunt measurement of how much weight your repo is carrying.
+
+### 9. `unify-design`
+
+A web-dev skill for the thing every vibe-coded project eventually needs and never gets around to: one design system, consistently referenced, no drift. Most projects ship with three different primary blues, two button implementations, five slightly different paddings, a logo pasted into six files as raw `<img>` tags, and two pages whose navigation doesn't match. Each is invisible in isolation and obvious to a first-time visitor.
+
+`unify-design` treats the project's brand identity — colors, spacing, typography, radii, shadows, breakpoints, and the core components — as the single source of truth, and rewrites drift back to tokens. It detects the framework (Tailwind v3 and v4, CSS Modules, styled-components, Emotion, Material UI, Chakra UI, vanilla CSS with custom properties) and uses the project's own idioms — Tailwind theme, CSS variables, or a theme object — never a foreign pattern.
+
+It does three things. First, it establishes the source of truth: if there's no tokens file, it scaffolds one with opinionated defaults (spacing scale, typography scale, radius scale) and asks the operator for the two values it can't guess — the primary color and the display font. Second, it audits for drift — hardcoded hex values outside the tokens file, arbitrary Tailwind values like `w-[432px]`, inline style objects, duplicate Button/Card/Nav/Logo components, near-match colors that were obviously a copy-paste error. Third, it fixes the drift: small replacements apply directly, multi-file refactors hand off to `refactor-verify` so the token rename or component consolidation gets call-site verification.
+
+Two things it won't do on purpose: invent a brand when the project has none (it asks), and rewrite across frameworks (if you're on styled-components, it uses your theme object, not Tailwind's).
 
 ---
 
@@ -191,8 +220,10 @@ Every skill follows the same four-part output shape: what it did, what it found,
 
 - **Cleaning up a repo.** `fight-repo-rot` finds the worst offender → `refactor-verify` fixes it with verification → `write-for-ai` writes the commit and PR.
 - **Preparing a release.** `audit-security` for secrets → `refactor-verify` on anything critical → `setup-ci` to catch regressions next time.
-- **Onboarding to a new repo.** `/vibesubin` for the full sweep → `write-for-ai` fills in the missing `CLAUDE.md` → `manage-config-env` audits `.gitignore` and branch strategy.
-- **Starting from scratch.** `manage-config-env` scaffolds → `setup-ci` lays down workflows → `write-for-ai` writes README and `CLAUDE.md`.
+- **Onboarding to a new repo.** `/vibesubin` for the full sweep → `write-for-ai` fills in the missing `CLAUDE.md` → `manage-secrets-env` audits `.gitignore` and secrets → `project-conventions` audits branches, deps, layout.
+- **Starting from scratch.** `manage-secrets-env` scaffolds `.env.example` and `.gitignore` → `project-conventions` scaffolds Dependabot and a branch note → `setup-ci` lays down workflows → `write-for-ai` writes README and `CLAUDE.md`.
+- **"Why is my repo so big?"** `manage-assets` runs the bloat report → `refactor-verify` executes any history rewrite or LFS migration with verification.
+- **"Why do my pages all look slightly different?"** `unify-design` scaffolds the tokens file (if missing), audits the drift, and rewrites components back to tokens → `refactor-verify` handles the multi-file consolidation.
 
 You don't plan these yourself; the skills suggest the next hand-off when it makes sense.
 
