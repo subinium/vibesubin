@@ -21,3 +21,8 @@ __pycache__/
 .local/
 tmp/
 scratch/
+
+# Local harness / agent state (do not commit)
+.omx/
+.claude/
+.cursor/
