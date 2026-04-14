@@ -298,6 +298,22 @@ Things to watch for in your own output:
 - **Secrets in logs** — `echo $DEPLOY_KEY` in a step leaks the key to the public log. Never echo secrets
 - **Long-running runners forgotten** — if the workflow starts a server and doesn't stop it, the runner eventually times out. Scope runners to single commands
 
+## Sweep mode — read-only audit
+
+When invoked from `/vibesubin` (the umbrella skill's parallel sweep), this skill runs in **read-only audit mode**. Do not scaffold workflows, do not write `.github/workflows/*.yml`, do not touch any files.
+
+Instead, produce a findings-only report:
+
+- What CI/CD configuration currently exists (`.github/workflows/`, `.gitlab-ci.yml`, etc.) — list files with one-line purposes.
+- What's missing (no test workflow, no deploy workflow, no secret management pattern, no OIDC setup where it would fit).
+- What looks broken or outdated (SHA pinning drift, deprecated actions, missing `permissions:` blocks, overly-broad `GITHUB_TOKEN` scopes).
+- Stoplight verdict: 🟢 CI is in good shape / 🟡 gaps exist but nothing critical / 🔴 critical issues (secrets in logs, write-all token, no concurrency guards on deploy).
+- A one-line "fix with" pointer indicating that running `/setup-ci` directly will scaffold the missing pieces.
+
+The operator reviews the sweep report and, if they want the fixes applied, invokes `/setup-ci` directly — which then runs the full scaffolding procedure.
+
+How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit instruction like "produce findings only, do not edit". If that's present, never write. If the operator invokes this skill by name (`/setup-ci`), the full procedure applies and editing is expected.
+
 ## Hand-offs
 
 - Deploy touches config files → `manage-config-env` for the `.env` pattern

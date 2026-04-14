@@ -71,6 +71,8 @@ Full report template and synthesis rules live in the [umbrella `SKILL.md`](./plu
 
 **Sweep vs. single skill.** Sweep for open-ended questions: *"I just inherited this repo"*, *"is this ready to ship?"*, *"second opinion"*. Call a skill directly when you already know what you want: *"refactor this file"* → `/refactor-verify`. *"I pushed my `.env`"* → `/audit-security`, urgency first. *"Write the README"* → `/write-for-ai`.
 
+**Harsh mode.** The sweep runs in balanced tone by default — honest but warm. Ask for harsh mode and it stops softening anything: *"`/vibesubin harsh`"*, *"brutal review"*, *"don't sugarcoat"*, *"매운 맛으로"*, *"厳しめで"*. The report is still read-only, still backed by the same evidence, but drops hedging language, leads with the worst finding, and refuses to close on *"looks fine"* when real issues exist. Opt-in only — never defaults to harsh.
+
 ---
 
 ## Install
@@ -239,3 +241,7 @@ Open source, but PRs aren't currently accepted. Found a bug, want a new language
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+
+---
+
+Changes over time are tracked in [`CHANGELOG.md`](./CHANGELOG.md). Plugin version lives in [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json).

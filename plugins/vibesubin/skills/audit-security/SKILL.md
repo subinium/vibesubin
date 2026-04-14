@@ -298,6 +298,20 @@ Things to watch for in your own output:
 - **Fabricated severity** — inventing "CVSS 9.8" scores you didn't actually compute. Use plain labels (critical/high/medium) and explain the reasoning.
 - **Missing the obvious** — running grep for `eval(` and missing a `.env` file sitting in `git ls-files`. Always check tracked secrets first; it's the highest signal-per-second category.
 
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"*), switch output rules:
+
+- **Lead with the worst finding**, not the summary. First line of the report is the single most dangerous issue, in one sentence, with file and line.
+- **No softening words.** Drop *"potential"*, *"could be"*, *"might allow"*, *"consider"*, *"you may want to"*. Replace with blast-radius framing: *"a stranger can read every user's record via `src/api/users.py:47`"*, not *"potential information disclosure in the users endpoint"*.
+- **Severity labels stay literal.** CRITICAL stays CRITICAL. HIGH stays HIGH. Do not inflate — harsh mode is about framing, not severity inflation.
+- **Triage still applies.** Every finding is still real / false-positive / needs-human-review. Harsh mode removes *hedge words*, not the triage discipline — a false positive is still a false positive, but labeled *"false positive, ignore"* rather than *"probably not exploitable in this codebase, but worth reviewing"*.
+- **No *"looks fine"* closures.** If any finding is CRITICAL or HIGH, the verdict line does not end with reassurance. *"Don't ship until items 1–3 are fixed and secrets are rotated"*, not *"mostly clean, two things to look at"*.
+- **Incident findings get urgency language.** If a secret is in git history, the first line of the report is *"Stop what you're doing. Rotate the credential now. Here's the incident runbook."* — no preamble.
+- **Plain-language impact still required.** *"CWE-89"* is never the headline; *"a user can run arbitrary SQL against your database"* is. Harsh mode uses the same plain language, just without the softening connectives around it.
+
+Harsh mode does not invent findings, fabricate CVSS scores, or become rude. Every harsh statement must be backed by the same evidence the balanced version would cite. The change is framing, not substance.
+
 ## Hand-offs
 
 - Critical findings involving refactoring sensitive code → hand off to `refactor-verify` for the fix

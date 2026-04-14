@@ -69,6 +69,8 @@ plugin의 모든 skill을 repo에 병렬로 돌리고, findings를 리포트 하
 
 **Sweep vs. 단일 skill.** 열린 질문엔 sweep: _"방금 이 repo 물려받음"_, _"배포해도 되나?"_, _"second opinion"_. 원하는 게 분명하면 skill 직접 호출: _"이 파일 리팩토링"_ → `/refactor-verify`. _"`.env` push해버림"_ → `/audit-security`, 긴급 모드. _"README 써줘"_ → `/write-for-ai`.
 
+**Harsh mode.** sweep은 기본적으로 balanced 톤으로 돕니다 — 솔직하지만 너무 차갑진 않게. 매운 버전을 원하면 그렇게 시키세요: _"`/vibesubin harsh`"_, _"brutal review"_, _"돌려 말하지 말고"_, _"매운 맛으로"_, _"厳しめで"_. 리포트는 여전히 read-only고, 근거도 똑같이 붙지만, 완곡한 표현을 걷어내고 제일 나쁜 finding부터 꺼내고, 실제 문제가 있는데 _"괜찮아 보여요"_로 덮고 끝내는 걸 거부합니다. opt-in 전용 — 자동으로 harsh로 가는 일은 없습니다.
+
 ---
 
 ## Install
@@ -212,7 +214,7 @@ plugins/vibesubin/skills/<skill-name>/
 
 ---
 
-## Philosophy
+## 철학
 
 모든 skill이 공유하는 규칙 몇 개입니다. 외울 필요는 없고 — 지금과 앞으로의 skill이 일관되게 유지되라고 있는 겁니다.
 
@@ -228,12 +230,16 @@ plugins/vibesubin/skills/<skill-name>/
 
 ---
 
-## Contributing
+## 기여
 
 오픈소스지만 PR은 지금 안 받고 있습니다. 버그, 새 언어·런타임 지원 요청, 애매한 문서, 새 skill 아이디어 있으면 [issue](https://github.com/subinium/vibesubin/issues)로 주세요. 메인테이너가 직접 보고 반영합니다. 목소리 일관성을 위해서요. 자세한 건 [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ---
 
-## License
+## 라이선스
 
 MIT — [LICENSE](./LICENSE) 참고.
+
+---
+
+변경 내역은 [`CHANGELOG.md`](./CHANGELOG.md)에서 추적합니다. Plugin 버전은 [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)에 있습니다.

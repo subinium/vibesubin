@@ -305,6 +305,23 @@ Don't use this skill when:
 - The operator just needs a quick explanation in chat
 - The content is ephemeral (a debug note, a scratch plan)
 
+## Sweep mode — read-only audit
+
+When invoked from `/vibesubin` (the umbrella skill's parallel sweep), this skill runs in **read-only audit mode**. Do not write, edit, or create any documentation files. Do not touch README.md, CLAUDE.md, AGENTS.md, commit messages, or PR bodies.
+
+Instead, produce a findings-only report:
+
+- What docs currently exist (README, CLAUDE.md / AGENTS.md, CONTRIBUTING, ARCHITECTURE, changelogs) — list files with one-line condition assessments.
+- What's missing for the AI-friendly doc schema (no CLAUDE.md, no env-var table, no verification commands, no invariants section).
+- What's stale (docs claim a command that no longer works, paths that moved, env vars that were removed).
+- What's ghostly (docs written in prose-only when a table would help, sections that add no invariants, "welcome to the project" padding).
+- Stoplight verdict: 🟢 docs would survive a fresh AI session / 🟡 gaps the next session will trip over / 🔴 the next session would reverse-engineer the project from code because docs are missing or lying.
+- A one-line "fix with" pointer indicating `/write-for-ai` will rewrite or fill in the gaps when invoked directly.
+
+The operator reviews the sweep report and, if they want the fixes applied, invokes `/write-for-ai` directly — which then runs the full write/verify procedure.
+
+How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
+
 ## Hand-offs
 
 - If rewriting a doc risks losing concrete facts → borrow the info-preservation check from `refactor-verify` (grep old doc's concrete terms, verify they appear in the new doc, or are deliberately dropped)

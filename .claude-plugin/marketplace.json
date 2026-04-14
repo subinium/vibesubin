@@ -9,7 +9,7 @@
       "name": "vibesubin",
       "source": "./plugins/vibesubin",
       "description": "A caring skill pack for vibe coders — portable engineering discipline (refactor verification, security, repo rot, AI-friendly docs, CI, config/env management) encoded as agent skills.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "homepage": "https://github.com/subinium/vibesubin",
       "license": "MIT"
     }

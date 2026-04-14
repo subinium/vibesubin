@@ -71,6 +71,8 @@
 
 **全扫 vs 单 skill。** 面对开放性问题就全扫:*"我刚接手这个仓库"*、*"这玩意能上线了吗"*、*"给我个第二意见"*。已经知道自己要什么就直接点名:*"重构这个文件"* → `/refactor-verify`。*"我把 `.env` push 上去了"* → `/audit-security`,紧急优先。*"写 README"* → `/write-for-ai`。
 
+**严厉模式。** 默认情况下 sweep 的语气是平衡的 —— 诚实但不扎人。想让它严厉一点就明说:*"`/vibesubin harsh`"*、*"严厉模式"*、*"说狠一点"*、*"别嘴软"*、*"매운 맛으로"*、*"厳しめで"*。报告还是只读的,证据还是那些证据,但它会把含糊其辞的话都扔掉,把最糟的那条放到最前面,也不会在真问题还堆着的时候用一句 *"看起来还行"* 收尾。只在你主动要的时候才开 —— 永远不会默认严厉。
+
 ---
 
 ## 安装
@@ -239,3 +241,7 @@ plugins/vibesubin/skills/<skill-name>/
 ## 许可证
 
 MIT —— 见 [LICENSE](./LICENSE)。
+
+---
+
+历次改动记录在 [`CHANGELOG.md`](./CHANGELOG.md) 里。插件版本号在 [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) 里。

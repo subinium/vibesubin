@@ -47,6 +47,47 @@ When the operator gives a vague ask ("help", "where do I start", "my repo is a m
 
 The two modes exist because different users need different entry points. The command mode is for "do everything"; the router mode is for "help me narrow down."
 
+## Tone: balanced (default) vs. harsh (opt-in)
+
+Every sweep runs in one of two tones. The default is **balanced** — honest but warm, direct but not cold. Operators opt in to **harsh** when they want a review that refuses to soften anything.
+
+### When to switch to harsh mode
+
+Any of these signals activates harsh mode:
+
+- `/vibesubin harsh` or `/vibesubin spicy`
+- *"brutal review"*, *"harsh review"*, *"harsh mode"*
+- *"don't sugarcoat"*, *"don't hold back"*, *"no hedging"*, *"give it to me straight"*
+- *"매운 맛"* / *"더 세게 피드백"* / *"봐주지 말고"*
+- *"厳しめ"* / *"遠慮なく"* / *"手加減せずに"*
+- *"严厉模式"* / *"别嘴软"* / *"说狠一点"*
+
+The explicit Korean / Japanese / Chinese phrases are there on purpose — non-English operators ask for harsh tone in their own language.
+
+### What changes in harsh mode
+
+1. **Marker propagation.** Every specialist task description is prefixed with `tone=harsh` in addition to `sweep=read-only`. Specialists check for this marker and switch to their own harsh-mode output rules.
+2. **No hedging.** Drop *"probably"*, *"might be"*, *"consider"*, *"you could"*, *"it may be worth"*. Replace with direct subject-verb sentences. *"Fix this"*, not *"you might want to fix this"*.
+3. **No *"looks fine"* closures at severity above clean.** If any finding is HIGH or CRITICAL, the verdict line cannot end on a positive note. *"Two polish items"* becomes *"three fixes blocking a clean bill"*.
+4. **Worst-first ranking, no tails.** The top-10 list is ordered strictly by blast radius. No *"also consider"* footer, no *"nice-to-haves"* at the bottom.
+5. **Verdict line is direct.** *"Do not ship"*, *"Ship only after items 1–3"*, *"This is not ready"*. No *"solid with a few things to watch"*.
+6. **Vibe check paragraph leads with the worst finding.** *"This repo will break within three releases if you don't fix items 1–3"* rather than *"decent mid-stage project with two things that stand out"*.
+
+Harsh mode is **not** about being rude, exaggerating, or inventing findings. It is about refusing to soften the framing when the findings are real. Every harsh statement must still be backed by evidence — the same evidence the balanced version would cite.
+
+### What does NOT change in harsh mode
+
+- Findings themselves. Same metrics, same counts, same confidence tags.
+- Read-only behavior. Harsh mode is still a read-only sweep.
+- Professional tone. Harsh ≠ unprofessional. No profanity, no insults toward the operator, no personal attacks on prior contributors.
+- Factual accuracy. If a file is actually fine, the harsh report says it's fine — it just doesn't pad the report with filler praise.
+
+### When *not* to use harsh mode
+
+- When the operator is clearly new to coding. Harsh mode is for operators who explicitly want calibration, not for intimidating beginners.
+- When the repo is already clean. A harsh verdict on a clean repo reads as rude, not honest.
+- When the operator didn't ask for it. Never default to harsh.
+
 ---
 
 ## Mode 1 — Full sweep procedure
@@ -59,45 +100,58 @@ Before running, confirm once:
 
 If the operator says yes, proceed. If they want to narrow the scope (one directory, one file, one area), adjust before launching.
 
-### Step 2 — Launch the six specialists in parallel
+### Step 2 — Launch the six specialists in parallel, all in read-only mode
 
 Run all six sub-skills as **parallel task agents** (or parallel subagents, depending on the host framework). Do not serialize. The whole point of this command is that the operator gets results in minutes, not an hour.
 
-Each specialist runs with **read-only scope** for this sweep — they produce findings, not fixes. Fixes are applied only after the operator reviews the synthesized report and approves next steps.
+**Read-only mode is enforced by the launch instruction itself.** Every specialist task MUST begin with the exact token `sweep=read-only` followed by "produce findings only, do not edit any files, do not run lifecycle workflows." Each specialist has a matching "Sweep mode — read-only audit" section in its SKILL.md that checks for this marker and switches to audit-only output. If a specialist does not see the marker, it will default to its full edit-capable behavior, which is incorrect for a sweep.
 
-Parallel launch targets:
+Two specialists (`fight-repo-rot`, `audit-security`) are pure-diagnosis by default and edit nothing regardless of the marker. The other four (`refactor-verify`, `setup-ci`, `write-for-ai`, `manage-config-env`) rely on this marker to stay read-only. Do not launch any of them without it.
+
+Parallel launch targets (the `sweep=read-only` prefix is mandatory — copy it into every task description verbatim):
 
 ```
 parallel {
-  refactor-verify      → "Snapshot current state. Baseline tests, typecheck, lint.
-                          Identify any recent refactor risk. Report: is the repo
-                          in a green baseline, or already in a red state?"
+  refactor-verify      → "sweep=read-only — produce findings only, do not edit
+                          any files, do not plan a dependency tree, do not run
+                          the 6-step procedure. Snapshot baseline state (tests,
+                          typecheck, lint). Report whether the repo is in a
+                          green baseline ready for refactors, or already red."
 
-  audit-security       → "Run the ten-category security sweep across the whole
-                          repo. Triage every finding. Report: critical, high,
-                          medium, false-positive counts."
+  audit-security       → "sweep=read-only — produce findings only. Run the
+                          ten-category security sweep. Triage every finding.
+                          Report critical / high / medium / false-positive counts."
 
-  fight-repo-rot       → "Compute churn × complexity. List top 10 hotspots,
-                          god files, dead code, hardcoded paths, stale TODOs,
-                          dependency rot. Report: prioritized fix list."
+  fight-repo-rot       → "sweep=read-only — produce diagnosis only, never edit.
+                          Run the full dead-code scan with HIGH/MEDIUM/LOW
+                          confidence tagging. Also report god files, hotspots,
+                          hardcoded paths, stale TODOs, dependency rot. Include
+                          the hand-off summary."
 
-  write-for-ai         → "Audit existing docs: README, CLAUDE.md/AGENTS.md,
-                          recent commit messages, recent PR descriptions. Score
-                          each against the AI-friendly schema. Report: what's
-                          missing, what's stale, what to rewrite first."
+  write-for-ai         → "sweep=read-only — produce findings only, do not edit
+                          or create any documentation files. Audit existing docs
+                          (README, CLAUDE.md/AGENTS.md, recent commits and PRs)
+                          against the AI-friendly schema. Report gaps, stale
+                          sections, and the stoplight verdict."
 
-  setup-ci             → "Inspect current CI/CD setup: .github/workflows,
-                          .gitlab-ci.yml, or equivalent. What exists, what's
-                          missing, what's broken. Report: current state +
-                          concrete next-step recommendation."
+  setup-ci             → "sweep=read-only — produce findings only, do not
+                          scaffold any workflow files, do not write to
+                          .github/workflows. Inspect the current CI/CD setup.
+                          Report what exists, what's missing, what's broken,
+                          with the stoplight verdict."
 
-  manage-config-env    → "Audit .env layout, .gitignore, dependency pinning,
-                          branch strategy, directory structure, path portability.
-                          Report: deviations from opinionated defaults."
+  manage-config-env    → "sweep=read-only — produce findings only, do not
+                          scaffold or edit any config files, do not run any
+                          lifecycle workflow (rotate/remove/migrate/provision).
+                          Audit four-bucket placement, .env drift, .gitignore
+                          coverage, dependency pinning, branch strategy, and
+                          hardcoded paths. Report deviations with stoplight."
 }
 ```
 
-Each specialist writes into the SKILL.md's own output format. No cross-contamination during the parallel phase.
+Each specialist writes into its own SKILL.md output format, constrained to read-only. No cross-contamination during the parallel phase.
+
+**If harsh mode is active**, prepend `tone=harsh` to every specialist task description above, before `sweep=read-only`. Example for `fight-repo-rot`: *"tone=harsh, sweep=read-only — produce diagnosis only, never edit. Apply harsh-mode output rules..."*. Every specialist checks for this marker and switches its output tone accordingly.
 
 ### Step 3 — Synthesize into one report
 
@@ -169,6 +223,23 @@ Approve the fix list and I'll hand off each item to the right specialist.
 criticals are resolved." or "This is honestly fine; ignore the noise below
 the fold.">
 ```
+
+### Harsh-mode report variant
+
+If the sweep was launched in harsh mode, the report structure is the same but the tone changes at three specific places:
+
+**Vibe check paragraph (harsh):** leads with the worst finding in one sentence, no warm-up. *"This repo ships a SQL injection, three confirmed-dead god files, and an .env in git history. Fix those before anything else; everything below is secondary."* No *"decent shape"* openings. No *"a few things"* softening.
+
+**Prioritized fix list (harsh):** strictly worst-first. No *"nice-to-have"* tail. No items below severity MEDIUM. If there are fewer than 10 items above MEDIUM, the list is shorter than 10 — don't pad to reach the top-10 quota.
+
+**Verdict line (harsh):** direct, no hedge. Acceptable forms:
+
+- *"Do not ship. Fix items 1–N first."*
+- *"Ship only after criticals rotate and hotspots split."*
+- *"This repo is not ready for open-source release. Here's the list."*
+- *"Clean. Ship it."* (only when the report has zero findings above 🟢)
+
+Never *"solid with a few things to watch"*, never *"mostly fine"*, never *"some polish items"* when harsh mode is active.
 
 ### Meme elements (keep light, don't overdo)
 

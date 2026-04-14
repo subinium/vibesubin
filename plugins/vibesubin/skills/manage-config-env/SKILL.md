@@ -280,6 +280,25 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 - Don't commit `.env`. Ever. If you see `.env` tracked in git, flag it immediately and hand off to `audit-security` for remediation.
 - Don't store secrets in `.env.example`. That file is committable; real secrets go in `.env`.
 
+## Sweep mode — read-only audit
+
+When invoked from `/vibesubin` (the umbrella skill's parallel sweep), this skill runs in **read-only audit mode**. Do not scaffold `.env.example`, do not edit `.gitignore`, do not touch any config files. Do not run lifecycle workflows (no rotate, no remove, no migrate, no provision).
+
+Instead, produce a findings-only report:
+
+- Four-bucket audit: are values in the right place? Any secrets in source, any constants in env vars that should be in code, any production secrets sitting in `.env`?
+- `.env.example` drift: does every key in `.env` have a matching entry in `.env.example`? Any `__REPLACE_ME__` placeholders still live in a real environment?
+- `.gitignore` coverage: is `.env` actually ignored? Any `*.pem`, `id_rsa`, `credentials*` files missing?
+- Dependency pinning: unpinned prod dependencies, missing lockfile, unused packages in the manifest.
+- Branch strategy: does the repo deviate from GitHub Flow, and if so, is the deviation documented?
+- Hardcoded path audit: absolute paths, literal IPs, username references in source.
+- Stoplight verdict: 🟢 config layout is clean / 🟡 drift or minor hygiene gaps / 🔴 committed secrets, missing `.gitignore` entries, or other incident-class findings.
+- A one-line "fix with" pointer indicating `/manage-config-env` will apply the scaffolds or run the lifecycle workflow when invoked directly.
+
+The operator reviews the sweep report and, if they want the fixes applied, invokes `/manage-config-env` directly — which then runs the full opinionated procedure.
+
+How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
+
 ## Hand-offs
 
 - Secrets already committed to git → `audit-security` immediately for blast-radius assessment, then run the *Rotate a secret* workflow above as the incident path.

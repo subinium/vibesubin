@@ -240,6 +240,20 @@ The bias is **high-leverage + low-risk first**. Dead code HIGH is usually the cl
 - **Don't recommend fixes without evidence.** Every finding must cite the metric or signal that triggered it — a grep count, a commit count, a file size, an LSP reference count.
 - **Don't scope-creep into planning.** "Here's what's wrong" is the deliverable. "Here's the fix plan" belongs in the hand-off skill.
 
+## Harsh mode — no hedging
+
+When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also be set by direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"* / *"厳しめ"*), switch output rules:
+
+- **No hedging language.** Drop *"probably dead"*, *"seems unused"*, *"consider removing"*, *"might be safe"*. Replace with direct verdicts: *"dead, delete it via `refactor-verify`"*, *"HIGH — safe"*, *"MEDIUM — confirm once, then delete"*.
+- **Confidence tags stay.** HIGH / MEDIUM / LOW labels are still required — harsh mode tightens framing, not accuracy.
+- **Dead code section leads the report**, not the stats block. The first thing the operator reads is the list of things they can delete today.
+- **MEDIUM items get action verbs.** Balanced mode says *"referenced only in tests — ask before deleting"*. Harsh mode says *"confirm the test is also obsolete, then delete both"*.
+- **Hotspot verdicts are direct.** *"This file is the next one to break"* instead of *"this file has high churn × complexity"*.
+- **No *"it's fine, leave it"* language.** If a file is flagged, it's flagged — the report does not end a flagged section with a reassurance. If a file is actually fine, it is omitted entirely.
+- **Summary line is direct.** *"Three confirmed-dead files, two god files blocking the hotspot, one orphaned directory — clean it up before the next feature."* Not *"a few items to look at when you have time."*
+
+Harsh mode does not invent findings, exaggerate confidence, or become rude. Every harsh statement must still cite the same metric or signal the balanced version would cite. The change is framing, not substance.
+
 ## Hand-offs
 
 - **Dead code (HIGH)** → `refactor-verify` with the list, each item becoming a delete-dead node

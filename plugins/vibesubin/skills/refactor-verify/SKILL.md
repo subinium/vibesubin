@@ -298,6 +298,22 @@ You cannot verify a change on top of broken tests. If step 1 discovers failing t
 
 A change on top of red is indistinguishable from a change that caused red. You lose the ability to prove causation.
 
+## Sweep mode — read-only audit
+
+When invoked from `/vibesubin` (the umbrella skill's parallel sweep), this skill runs in **read-only audit mode**. Do not snapshot, do not plan a dependency tree, do not execute any change, do not run the 6-step procedure.
+
+Instead, produce a findings-only report:
+
+- Current baseline state: do tests pass right now, does typecheck pass, does lint pass, does the project even build? (Capture the baseline status, do not run recovery.)
+- Recent refactor risk: any commits in the last 30 days that restructured code without evidence of verification (no test results in PR bodies, no symbol-diff output, etc.).
+- Obvious hidden regression risk: exported symbols that appear in the repo but never show a call-site count, files that match the god-file pattern AND have a recent high-churn count, pending renames visible in branch names but not yet merged.
+- Stoplight verdict: 🟢 repo is in a green baseline and can accept a refactor / 🟡 baseline has known failures that block verification / 🔴 baseline is red and no refactor can be verified on top of it.
+- A one-line "fix with" pointer indicating `/refactor-verify` will plan and execute any specific change when invoked directly.
+
+The operator reviews the sweep report and, if they want a specific refactor applied, invokes `/refactor-verify` directly — which then runs the full 6-step procedure.
+
+How to tell: the task context from the umbrella will include a `sweep=read-only` marker or an explicit "produce findings only, do not edit" instruction. Obey it. If the operator invokes this skill by name, the full procedure applies and editing is expected.
+
 ## Integration with other vibesubin skills
 
 - **Input from `fight-repo-rot`** — dead-code findings (with confidence) come in here as delete-dead jobs. The handoff includes the list of symbols and the confidence level; LOW-confidence deletions require an explicit operator OK.
