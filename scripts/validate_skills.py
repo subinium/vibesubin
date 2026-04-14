@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Validate that every backtick-quoted path mentioned in a SKILL.md actually exists.
+"""Validate the vibesubin skill pack against its own promises.
 
-The vibesubin pack promises a set of references/, scripts/, templates/ files
-inside each skill directory. If a SKILL.md links to a file that does not
-exist, the promise is empty and the pack loses trust.
+Two checks, both blocking:
 
-This validator walks every `plugins/*/skills/*/SKILL.md`, extracts every
-backtick-quoted path that looks like it lives inside the skill's own
-directory tree, and asserts the target is present on disk.
+1. Every backtick-quoted path mentioned in a SKILL.md that looks like an
+   internal asset (references/, scripts/, templates/) must exist on disk.
+   If a SKILL.md links to a file that is not present, the promise is empty
+   and the pack loses trust.
+
+2. Every SKILL.md must be at most 500 lines. Claude Code partially reads
+   long SKILL.md files, silently dropping tail sections. When a file grows
+   past the cap, extract content into references/*.md and replace with
+   one-line links from SKILL.md.
 
 Exit code:
-  0 — all references resolve
-  1 — one or more missing
+  0 — every check passes
+  1 — one or more checks failed
 
 Usage:
   python scripts/validate_skills.py
@@ -27,6 +31,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLUGINS_DIR = REPO_ROOT / "plugins"
+
+# Hard cap on SKILL.md length. Documented in CLAUDE.md, MAINTENANCE.md, and
+# docs/PHILOSOPHY.md. Enforced here so the rule has teeth.
+SKILL_MD_LINE_CAP = 500
 
 # A backtick-quoted path is considered an "internal asset" if it starts with
 # one of these path components (relative to the skill directory) and ends
@@ -73,21 +81,51 @@ def extract_promised_paths(skill_md: Path) -> list[str]:
     return ordered
 
 
+def count_lines(path: Path) -> int:
+    """Return the number of newline-terminated lines in a file.
+
+    Matches the count `wc -l` would report; a trailing non-newline line is
+    not counted, which is fine because SKILL.md files always end with a
+    newline.
+    """
+    with path.open("rb") as fh:
+        return sum(1 for _ in fh)
+
+
 def validate_skill(skill_dir: Path, verbose: bool) -> list[str]:
-    """Return a list of missing file references inside a single skill directory."""
+    """Return a list of violations inside a single skill directory.
+
+    Two categories of violation are reported here:
+      - missing file references (backtick-quoted internal paths)
+      - SKILL.md exceeding the line cap
+    """
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
         return [f"{skill_dir.relative_to(REPO_ROOT)}: SKILL.md missing"]
 
-    missing: list[str] = []
+    violations: list[str] = []
+
+    line_count = count_lines(skill_md)
+    if line_count > SKILL_MD_LINE_CAP:
+        violations.append(
+            f"{skill_dir.relative_to(REPO_ROOT)}/SKILL.md: "
+            f"{line_count} lines > {SKILL_MD_LINE_CAP} cap "
+            f"(extract tail sections into references/*.md)"
+        )
+    elif verbose:
+        print(
+            f"  ok  {skill_dir.relative_to(REPO_ROOT)}/SKILL.md "
+            f"({line_count}/{SKILL_MD_LINE_CAP} lines)"
+        )
+
     promised = extract_promised_paths(skill_md)
     for rel in promised:
         target = skill_dir / rel
         if not target.exists():
-            missing.append(f"{skill_dir.relative_to(REPO_ROOT)}/{rel}")
+            violations.append(f"{skill_dir.relative_to(REPO_ROOT)}/{rel}")
         elif verbose:
             print(f"  ok  {skill_dir.relative_to(REPO_ROOT)}/{rel}")
-    return missing
+    return violations
 
 
 def main() -> int:
@@ -104,26 +142,29 @@ def main() -> int:
         print(f"no skills found under {PLUGINS_DIR}", file=sys.stderr)
         return 1
 
-    total_missing: list[str] = []
+    total_violations: list[str] = []
     for skill_dir in skill_dirs:
         if not skill_dir.is_dir():
             continue
-        missing = validate_skill(skill_dir, verbose=args.verbose)
-        if missing:
-            print(f"\n{skill_dir.name}: {len(missing)} missing")
-            for m in missing:
-                print(f"  ✗ {m}")
-            total_missing.extend(missing)
+        violations = validate_skill(skill_dir, verbose=args.verbose)
+        if violations:
+            print(f"\n{skill_dir.name}: {len(violations)} violation(s)")
+            for v in violations:
+                print(f"  ✗ {v}")
+            total_violations.extend(violations)
         elif args.verbose:
-            print(f"\n{skill_dir.name}: all references present")
+            print(f"\n{skill_dir.name}: all checks pass")
 
     print()
-    if total_missing:
+    if total_violations:
         print(
-            f"FAIL — {len(total_missing)} promised assets missing across {len(skill_dirs)} skills"
+            f"FAIL — {len(total_violations)} violation(s) across {len(skill_dirs)} skills"
         )
         return 1
-    print(f"OK — every promise in {len(skill_dirs)} skills resolves to an actual file")
+    print(
+        f"OK — every promise in {len(skill_dirs)} skills resolves to an actual file "
+        f"and every SKILL.md is ≤{SKILL_MD_LINE_CAP} lines"
+    )
     return 0
 
 

@@ -4,6 +4,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-04-15
+
+### Added
+
+- `CLAUDE.md` at the repo root — operational rules read at the start of every Claude Code session on this repo. Contains the Never-do list (no bulk README rewrites, no new skill past the 10 cap, no `SKILL.md` over 500 lines, no worker without harsh mode, no task-done claim without `validate_skills.py` passing, no committed credentials, no missing `sweep=read-only` marker, no single-manifest version bump), Always-do list (run the validator after every skill edit, functional-only CHANGELOG, update all four READMEs together, sync both manifests, verify harsh-mode coverage, 4-part output shape), full release process (tag + `gh release create`), change-type → file matrix, load-bearing invariants table, and a "Recently decided" section for rules that should not be re-argued.
+- `scripts/validate_skills.py` now enforces the 500-line `SKILL.md` cap as a machine check. Previously only documented in `MAINTENANCE.md` and `docs/PHILOSOPHY.md`. The current largest `SKILL.md` is `write-for-ai/SKILL.md` at 379 lines — all 10 skills fit under the cap. Violation output points at the offending file with its line count and the "extract into references/*.md" remediation.
+- `scripts/validate_skills.py` now emits both checks in the success line: `OK — every promise in N skills resolves to an actual file and every SKILL.md is ≤500 lines`. Verbose mode (`--verbose`) reports per-file line counts as `N/500 lines`.
+
+### Changed
+
+- Plugin version `0.3.0` → `0.3.1` in `.claude-plugin/marketplace.json`.
+- Plugin version `0.3.0` → `0.3.1` in `plugins/vibesubin/.claude-plugin/plugin.json`.
+- `scripts/validate_skills.py` docstring rewritten to document both checks (asset-path existence + `SKILL.md` line cap).
+- `scripts/validate_skills.py` internal rename: `missing` → `violations` to reflect that the validator now reports more than one category of failure.
+
 ## [0.3.0] — 2026-04-15
 
 ### Added
@@ -104,7 +119,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - Install paths: Claude Code marketplace, `skills.sh`, manual symlink.
 - READMEs: EN / KO / JA / ZH.
 
-[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/subinium/vibesubin/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/subinium/vibesubin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/subinium/vibesubin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/subinium/vibesubin/releases/tag/v0.1.0

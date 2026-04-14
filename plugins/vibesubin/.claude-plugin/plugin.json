@@ -1,6 +1,6 @@
 {
   "name": "vibesubin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A caring skill pack for vibe coders. Encodes engineering discipline — refactor verification, minimal security audit, repo rot detection, AI-friendly docs, CI/CD basics, secrets lifecycle, project conventions, repo bloat diagnosis, and design-system unification — as a set of portable agent skills.",
   "homepage": "https://github.com/subinium/vibesubin",
   "license": "MIT",
