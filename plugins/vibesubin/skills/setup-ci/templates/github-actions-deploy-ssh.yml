@@ -1,0 +1,134 @@
+# Deploy workflow — fires when the test workflow succeeds on main.
+#
+# Drop this file at: .github/workflows/deploy.yml
+#
+# Requires these GitHub Secrets (set them via the web UI or `gh secret set`):
+#   DEPLOY_SSH_KEY   — the contents of your private SSH key
+#   DEPLOY_HOST      — the server hostname or IP
+#   DEPLOY_USER      — the SSH username on the server
+#
+# VM prerequisites (one-time setup on the server):
+#   1. The project is already cloned at ~/<project-name> on the server.
+#   2. A virtualenv / node_modules / etc. is already set up for production use.
+#   3. The systemd service (or equivalent) for the app exists.
+#   4. The deploy user has sudo NOPASSWD for the restart command, e.g.:
+#        <user> ALL=(ALL) NOPASSWD: /bin/systemctl restart <project>
+#   5. The health check URL ($HEALTH_URL below) actually returns 200.
+#
+# Important: this workflow deploys the exact revision that passed "test".
+# It does NOT blindly deploy the latest `main`.
+
+name: deploy
+
+on:
+  workflow_run:
+    workflows: ["test"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:   # for a reviewed manual re-deploy from the Actions tab
+    inputs:
+      deploy_ref:
+        description: "Optional branch, tag, or commit SHA to deploy manually"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # in-flight deploys finish; new ones queue
+
+jobs:
+  deploy:
+    # Only run if the test workflow actually passed. For manual dispatch,
+    # the event name is workflow_dispatch and the conclusion check is skipped.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # workflow_run => exact tested commit SHA
+      # workflow_dispatch => optional human-selected ref, else the revision selected in the UI
+      DEPLOY_REF: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.deploy_ref || github.sha }}
+
+    # The 'production' environment gates this job behind GitHub's
+    # required-reviewers feature if you enable it in repo settings.
+    environment:
+      name: production
+      url: https://example.com    # TODO: replace with your site URL
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+        with:
+          ref: ${{ env.DEPLOY_REF }}
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST:    ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          # Write the key to a file — never 'echo' it into a log.
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Trust the host's fingerprint on first connection.
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_REF: ${{ env.DEPLOY_REF }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          TARGET_REF="${DEPLOY_REF:?DEPLOY_REF missing}"
+          cd ~/<project-name>                                 # TODO: replace
+          BEFORE=$(git rev-parse HEAD)
+          git fetch origin main
+          # Deploy the exact tested revision, not "latest main".
+          if ! git rev-parse --verify "${TARGET_REF}^{commit}" >/dev/null 2>&1; then
+              echo "Commit/ref ${TARGET_REF} is not available after fetch. Aborting." >&2
+              exit 1
+          fi
+          git checkout --detach "$TARGET_REF"
+          AFTER=$(git rev-parse HEAD)
+          echo "Deploying $BEFORE -> $AFTER"
+
+          # TODO: install / build / migrate steps
+          # Example for a Python app with a venv:
+          if [ -f requirements.txt ]; then
+              source .venv/bin/activate
+              pip install -q -r requirements.txt
+          fi
+
+          # Restart the service. NOPASSWD sudo required.
+          sudo systemctl restart <project>                    # TODO: replace
+          sleep 2
+          sudo systemctl is-active <project>                  # TODO: replace
+          REMOTE
+
+      - name: Post-deploy health check
+        env:
+          HEALTH_URL: https://example.com/health              # TODO: replace
+        run: |
+          # Retry a few times in case the service is still coming up.
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 "$HEALTH_URL" > /dev/null; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Health check failed (attempt $i), retrying..."
+            sleep 3
+          done
+          echo "Health check never passed — deploy is suspect."
+          exit 1
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -f ~/.ssh/known_hosts

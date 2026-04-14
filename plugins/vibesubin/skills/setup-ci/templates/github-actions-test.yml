@@ -1,0 +1,115 @@
+# Test workflow — runs on every push to main and every pull request.
+#
+# Drop this file at: .github/workflows/test.yml
+#
+# Guards built in:
+#   - permissions: contents: read       → least-privilege default token
+#   - third-party actions pinned to SHA  → supply-chain safety
+#   - concurrency group                  → cancels older runs on the same PR
+#   - timeout-minutes                    → a hung job eventually fails
+#
+# Replace the "TODO" comments with your project's real test commands.
+
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Start from zero permissions. Grant only what each job needs.
+permissions:
+  contents: read
+
+# One run per branch/PR at a time. Older runs cancel.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        # Pin to commit SHA — never a floating tag.
+        # To update, look up the latest release at
+        #   https://github.com/actions/checkout/releases
+        # and copy its commit SHA.
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683   # v4.2.2
+
+      # --- Language setup: keep only the block you need, delete the others ---
+
+      # Python
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065   # v5.6.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # Node / TypeScript
+      # - name: Set up Node
+      #   uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020   # v4.4.0
+      #   with:
+      #     node-version: '20'
+      #     cache: 'npm'
+
+      # Rust
+      # - name: Set up Rust
+      #   uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
+      #   with:
+      #     toolchain: stable
+      #     components: clippy
+
+      # Go
+      # - name: Set up Go
+      #   uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b   # v5.4.0
+      #   with:
+      #     go-version: '1.22'
+      #     cache: true
+
+      # --- Install dependencies ---
+      - name: Install dependencies
+        run: |
+          # TODO: replace with your project's install command
+          pip install -r requirements.txt
+          pip install ruff mypy pytest
+
+      # --- Lint ---
+      - name: Lint
+        run: |
+          # TODO: replace with your linter
+          ruff check .
+
+      # --- Typecheck ---
+      - name: Typecheck
+        run: |
+          # TODO: replace with your typechecker
+          mypy .
+        continue-on-error: false
+
+      # --- Tests ---
+      - name: Run tests
+        run: |
+          # TODO: replace with your test command
+          pytest -q --tb=short
+
+  # Optional: add a dependency audit job. Remove if noisy.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true   # advisory-only while the baseline is noisy
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit --strict

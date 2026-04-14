@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local scratch / env
+.env
+.env.*
+!.env.example
+*.local
+.local/
+tmp/
+scratch/
