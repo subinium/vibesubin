@@ -9,6 +9,10 @@ Thumbs.db
 *.swo
 *~
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # Local scratch / env
 .env
 .env.*
