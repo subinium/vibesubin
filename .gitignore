@@ -17,6 +17,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.example.template
+!.env.*.template
 *.local
 .local/
 tmp/
