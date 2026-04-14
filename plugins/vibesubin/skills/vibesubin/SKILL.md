@@ -69,7 +69,7 @@ Parallel launch targets:
 
 ```
 parallel {
-  refactor-safely      → "Snapshot current state. Baseline tests, typecheck, lint.
+  refactor-verify      → "Snapshot current state. Baseline tests, typecheck, lint.
                           Identify any recent refactor risk. Report: is the repo
                           in a green baseline, or already in a red state?"
 
@@ -125,7 +125,7 @@ polish items if you have 20 minutes.">
 
 Six skills in parallel. Each one's full report is in the section below.
 
-- refactor-safely:      <green | yellow | red> — <one-line summary>
+- refactor-verify:      <green | yellow | red> — <one-line summary>
 - audit-security:       <green | yellow | red> — <one-line summary>
 - fight-repo-rot:       <green | yellow | red> — <one-line summary>
 - write-for-ai:         <green | yellow | red> — <one-line summary>
@@ -136,14 +136,14 @@ Six skills in parallel. Each one's full report is in the section below.
 
 | # | File / area | What | Severity | Fix with | Est. time |
 |---|---|---|---|---|---|
-| 1 | src/api/user.ts:187 | SQL injection in `get_user_by_email` | CRITICAL | audit-security → refactor-safely | 20 min |
-| 2 | src/api/user.ts (whole file) | Hotspot: 870 LOC, 18 CCN, 47 commits / 6mo | HIGH | refactor-safely | 2–3 hours |
+| 1 | src/api/user.ts:187 | SQL injection in `get_user_by_email` | CRITICAL | audit-security → refactor-verify | 20 min |
+| 2 | src/api/user.ts (whole file) | Hotspot: 870 LOC, 18 CCN, 47 commits / 6mo | HIGH | refactor-verify | 2–3 hours |
 | 3 | .env committed in git history | Secret exposure | CRITICAL | audit-security → manage-config-env | 30 min + rotate |
 | ... |
 
 ## By specialist
 
-### refactor-safely
+### refactor-verify
 <full specialist output>
 
 ### audit-security
@@ -195,7 +195,7 @@ If the operator's request is vague but they didn't invoke the command, route to 
 User request
 │
 ├── Contains "refactor" / "move" / "rename" / "split" / "is this working"
-│   → refactor-safely
+│   → refactor-verify
 │
 ├── Contains "secure" / "safe" / "leak" / "vulnerability" / "audit"
 │   → audit-security

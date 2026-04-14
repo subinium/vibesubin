@@ -1,7 +1,7 @@
 ---
 name: manage-config-env
-description: Opinionated defaults for the structural decisions non-developers shouldn't have to invent. Decides where a value lives (constant in source, .env, CI secret, environment variable), scaffolds .env.example and .gitignore, picks a branch strategy (GitHub Flow by default), enforces dependency pinning, and audits for hardcoded paths. Language-agnostic.
-when_to_use: Trigger on "where should this config go", ".env", "environment variable", "branch strategy", "main or dev", "gitignore", "dependency version", "pin this", "config management", or when onboarding a new project that needs a baseline layout.
+description: Opinionated defaults and full lifecycle playbook for config and secrets. Decides where a value lives (constant, .env, CI secret, env var), scaffolds .env.example and .gitignore, and manages the lifecycle end to end — add, update, rotate, remove, migrate between buckets, audit cross-environment drift, provision new environments. Also picks a branch strategy (GitHub Flow), enforces dependency pinning, and audits for hardcoded paths. Language-agnostic.
+when_to_use: Trigger on "where should this config go", ".env", "environment variable", "rotate this secret", "remove unused env var", "migrate to env var", "add staging environment", "check env drift", "audit secrets across environments", "branch strategy", "main or dev", "gitignore", "dependency version", "pin this", "config management", or when onboarding a new project that needs a baseline layout.
 allowed-tools: Read Write Edit Glob Grep Bash(grep *) Bash(git *) Bash(gh secret *) Bash(vercel env *) Bash(fly secrets *) Bash(netlify env *) Bash(railway variables *) Bash(gcloud *) Bash(aws *)
 ---
 
@@ -90,7 +90,25 @@ The core rule is the same across languages: read the value, check for empty or p
 
 ### Drift check — keep `.env.example` honest
 
-The example file becomes useless the moment it drifts from the real `.env`. A ready-to-run drift check lives at `scripts/check-env-drift.sh` — wire it into the project's test workflow so a missing variable in the example gets caught on every PR.
+The example file becomes useless the moment it drifts from the real `.env`. A ready-to-run drift check lives at `scripts/check-env-drift.sh` — wire it into a **pre-commit hook**, not CI. CI environments usually have no local `.env`, so the script would exit clean even when `.env.example` is out of date. Pre-commit catches it at the moment the operator adds a new variable.
+
+### Build-time vs runtime env vars (Next.js, Vite, CRA)
+
+Environment variables in frontend frameworks come in two flavors and the distinction causes the most common leak among non-developers.
+
+- **Build-time / public** (`NEXT_PUBLIC_*` in Next.js, `VITE_*` in Vite, `REACT_APP_*` in CRA): baked into the client JavaScript bundle at build time. Anyone who views page source sees them. **Never put a secret in a build-time variable.** Safe uses: public API URLs, feature flags, non-secret configuration, analytics IDs.
+- **Runtime / server-only** (anything without the framework's public prefix): only available to server-side code. Safe for database URLs, API keys, session secrets, signing keys.
+
+If a value is secret and also needs to be visible in the browser, it does not belong in env vars — it belongs behind an API route that reads the server-side secret and returns only the derived data the client actually needs.
+
+### Precedence when multiple `.env` files exist
+
+Most frameworks load several `.env` files in a defined order. Later files override earlier ones. When debugging *"why is this env var wrong?"*, always confirm which file the framework actually loaded — a value in `.env` can be silently overridden by `.env.local`.
+
+- **Next.js / Vite**: `.env` → `.env.<environment>` → `.env.local` → `.env.<environment>.local`. The `.local` variants are gitignored by convention; `.env.development` / `.env.production` are committed only if they contain non-secret defaults.
+- **Node `dotenv`**: one file by default. Use `dotenv-flow` or an explicit chain for multi-file support.
+- **Python `python-dotenv`**: one file by default; use `dotenv_values()` merging for explicit multi-file chains.
+- **Ruby / Rails**: reads `.env.<environment>` through `dotenv-rails`, with `.env.local` as an override.
 
 ## `.gitignore` — the default-safe template
 
@@ -145,7 +163,101 @@ The full naming table and structural-smell detection list is in `references/dire
 
 Every absolute path, IP literal, username, or platform separator in source is a time bomb. This sub-skill audits for them and offers one-line fixes.
 
-Core patterns to grep for: `C:\\`, `/Users/<name>`, `/home/<name>`, literal IPv4 addresses, `\\` in string literals, `/tmp/<specific>`. The full pattern-and-fix table with language-specific equivalents is in `references/path-portability.md`. When the audit finds more than a couple of files, hand off to `refactor-safely` for the 1:1 preservation work.
+Core patterns to grep for: `C:\\`, `/Users/<name>`, `/home/<name>`, literal IPv4 addresses, `\\` in string literals, `/tmp/<specific>`. The full pattern-and-fix table with language-specific equivalents is in `references/path-portability.md`. When the audit finds more than a couple of files, hand off to `refactor-verify` for the 1:1 preservation work.
+
+## Lifecycle workflows — the "manage" part
+
+Placing a value in the right bucket is the first decision. Everything after is lifecycle: values get added, updated, rotated, removed, migrated between buckets, and audited across environments. This section is the opinionated playbook for each operation. Full per-step detail and edge cases live in `references/lifecycle-workflows.md`.
+
+### Add a new value
+
+Use the four-bucket tree to decide where it goes, then run this checklist:
+
+1. Add to the chosen bucket (source constant, `.env` + `.env.example`, CI/platform secret store, or environment variable).
+2. If it's in `.env`, add the same key to `.env.example` with `__REPLACE_ME__` as the value.
+3. Add a startup validation check so the app refuses to boot without it. See `references/startup-validation.md`.
+4. Document the variable in the env-var table in README or `CLAUDE.md`. Hand off to `write-for-ai` if the table is stale or missing.
+5. Notify collaborators — if the app is deployed, the CI/platform secret must exist before the next deploy or startup validation will fail the rollout.
+
+### Update an existing value
+
+The trap is forgetting one environment. A password changed in local `.env` but not in GitHub Secrets breaks the next deploy. Update in this order:
+
+1. Local `.env` first (fastest feedback).
+2. Run the app locally against the new value; confirm it works before touching anything remote.
+3. Update every remote secret store that references the key. List them explicitly — `gh secret list`, `vercel env ls`, `fly secrets list`, etc. Don't assume one store is the only one.
+4. Trigger any cache that holds the value: edge config, CDN env, Lambda warmup, long-running workers that cache at boot.
+5. Deploy and hit a health probe to confirm the new value is in effect.
+
+### Rotate a secret
+
+The most important lifecycle operation and the one most frequently skipped. Triggers: a collaborator leaves, a laptop is lost, a secret appears in logs, a scheduled rotation window, or a suspected leak. Incident rotation is the urgent path — scheduled rotation is the preventive one. Incident rotations hand off to `audit-security` first to assess blast radius.
+
+**Zero-downtime rotation** (when the provider supports dual-valid credentials — most API keys, some JWT signing setups, IAM access keys):
+
+1. Generate the new secret at the provider.
+2. Add the new value alongside the old in every environment. Both are valid during the overlap window.
+3. Roll the application once so every instance picks up the new value.
+4. Remove the old value at the provider.
+5. Verify the old value now fails authentication.
+6. Append an entry to `ROTATION_LOG.md` at the repo root (date, key name, trigger, actor).
+
+**Downtime rotation** (when dual-valid is not supported — database passwords, single-value signing secrets):
+
+1. Schedule and announce a maintenance window.
+2. Generate the new secret.
+3. Put the app in maintenance mode (stop traffic or return 503 from a health gate).
+4. Update every environment in a coordinated burst, starting from the authoritative store.
+5. Roll the application.
+6. Verify startup and a critical path, then re-open traffic.
+7. Log the rotation.
+
+Provider-specific rotation recipes (AWS IAM, GCP service account keys, Stripe, OpenAI, database users, JWT signing keys, OAuth client secrets) live in `references/secret-rotation.md`. Always prefer OIDC over rotatable secrets when the platform supports it — a credential that doesn't exist cannot be rotated or leaked.
+
+### Remove an unused value
+
+The trap is leaving orphan secrets in CI that nobody owns. Steps:
+
+1. Grep the codebase for the key, including dynamic forms: string concatenation (`"DATABASE_" + "URL"`), template rendering, YAML/TOML/JSON config files, shell scripts, Dockerfiles, CI workflow files.
+2. If any reference is found, decide whether it's dead code (hand off to `fight-repo-rot` to confirm, then to `refactor-verify` to delete) or legitimate usage (the value is not removable yet; stop).
+3. Remove from `.env` and `.env.example` simultaneously so the drift check stays green.
+4. Remove from every CI / platform secret store. Keep the list from the *Update* workflow above.
+5. Remove from the env-var table in docs.
+6. Deploy and monitor startup validation — if any environment silently depended on the key, you'll see it here, not in production traffic.
+
+### Migrate between buckets
+
+Triggers: a compile-time constant needs to vary per environment (source constant → env var), a local-only value becomes a shared secret (`.env` → CI secret store), a feature flag graduates from env var to a runtime config service. Steps:
+
+1. Add the value to the new bucket without removing it from the old yet.
+2. Update every call site to read from the new location.
+3. Run the app and confirm it actually reads from the new location (log the source once at boot, or add a temporary assertion).
+4. Remove from the old bucket.
+5. Grep with a zero-match assertion that nothing still references the old location.
+6. Hand off to `refactor-verify` for symbol-level validation that no caller was missed.
+
+### Audit drift across environments
+
+`.env` vs `.env.example` is the minimum check. The full audit compares every environment: local `.env`, staging, production, and each CI / platform secret store. Drift modes to detect:
+
+- **Missing in target**: key present in source but absent in target. Deploy will fail on startup validation.
+- **Extra in target**: key present in target but nowhere else. Orphan — candidate for the *Remove* workflow.
+- **Same key, divergent value shape**: e.g., `DATABASE_URL` is a Postgres URL in prod but a SQLite path in staging. Runtime type mismatch.
+- **Placeholder in a non-local environment**: any `__REPLACE_ME__` still present in staging or production.
+
+The skill produces a table: key, value-shape fingerprint per environment (length, prefix, suffix — never the real value), drift verdict. **Never print real secret values** — fingerprints are the primitive for diffing secrets safely.
+
+### Provision a new environment
+
+Triggers: adding staging, spinning up a preview environment, onboarding a new deploy target, handing off a region. Steps:
+
+1. Read `.env.example` as the canonical required-keys list.
+2. Generate environment-specific values for every required key (a new database URL, a new domain, API keys scoped to the new environment, new OAuth client).
+3. Set them in the new environment's secret store via the CLI in one scripted pass. The script lives in `scripts/` so the operator can re-run or inspect it.
+4. Boot the app against the new environment. Startup validation is the test — missing keys fail loud.
+5. Document the new environment in `CLAUDE.md` via `write-for-ai`: name, purpose, URL, who owns it, what it's safe to break.
+
+---
 
 ## Output format — when asked a structural question
 
@@ -170,19 +282,23 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 
 ## Hand-offs
 
-- Secrets already committed to git → `audit-security` immediately, then rotate.
+- Secrets already committed to git → `audit-security` immediately for blast-radius assessment, then run the *Rotate a secret* workflow above as the incident path.
 - Branch strategy conflict with existing maintainer convention → respect the maintainer; use `write-for-ai` to document the existing convention in `CLAUDE.md`.
-- Dependency audit finds CVEs → `audit-security` for severity, `refactor-safely` for the upgrade diff.
-- Config refactoring across many files → `refactor-safely` for the 1:1 preservation.
+- Dependency audit finds CVEs → `audit-security` for severity, `refactor-verify` for the upgrade diff.
+- Config refactoring across many files (e.g., *Migrate between buckets* touching dozens of call sites) → `refactor-verify` for the 1:1 preservation and symbol-level proof.
+- A new env var needs to appear in README / `CLAUDE.md` env-var table → `write-for-ai` with the key, one-line purpose, and default or placeholder value.
+- Dead code found during the *Remove* workflow → `fight-repo-rot` to confirm, then `refactor-verify` to delete safely.
 
 ## References and templates
 
 - `references/secrets-cli.md` — per-platform CLI walkthroughs (GitHub, Vercel, Netlify, Fly, Railway, Cloud Run, AWS)
 - `references/startup-validation.md` — Python / Node / Go patterns for refusing to start on unfilled `__REPLACE_ME__`
+- `references/secret-rotation.md` — provider-specific rotation recipes (AWS IAM, GCP SA keys, Stripe, OpenAI, DB users, JWT signing, OAuth)
+- `references/lifecycle-workflows.md` — deep dive on add / update / rotate / remove / migrate / audit / provision with edge cases
 - `references/branch-strategy.md` — when NOT to use GitHub Flow, inherited `dev` branches, release branches
 - `references/directory-layout.md` — full naming table and structural-smell detection
 - `references/path-portability.md` — pattern-and-fix table with language-specific equivalents
 - `templates/.env.example.template` — starter `.env.example` with `__REPLACE_ME__` placeholders
 - `templates/.gitignore.template` — comprehensive default `.gitignore`
 - `templates/dependabot.yml.template` — starter dependency-update config
-- `scripts/check-env-drift.sh` — CI script that fails if `.env` and `.env.example` key sets diverge
+- `scripts/check-env-drift.sh` — pre-commit-friendly script that fails if `.env` and `.env.example` key sets diverge

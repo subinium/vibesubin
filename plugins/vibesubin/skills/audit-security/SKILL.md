@@ -26,7 +26,7 @@ Any of:
 - "is my `.env` exposed"
 - "OWASP"
 - before a public release or open-sourcing
-- after a major refactor (run together with `refactor-safely`)
+- after a major refactor (run together with `refactor-verify`)
 - when the operator mentions a data breach, incident, or scare
 
 If the operator asks for something outside this skill's scope (compliance audits, penetration testing, crypto review), say so plainly and suggest a specialist tool.
@@ -300,7 +300,7 @@ Things to watch for in your own output:
 
 ## Hand-offs
 
-- Critical findings involving refactoring sensitive code → hand off to `refactor-safely` for the fix
+- Critical findings involving refactoring sensitive code → hand off to `refactor-verify` for the fix
 - Tracked `.env` files → hand off to `manage-config-env` for the remediation pattern (rotate, remove from history, add to gitignore, re-examine collaborators)
 - Issues in CI/CD pipeline secrets → hand off to `setup-ci`
 - Repo-rot-adjacent findings (stale dependencies, unused libraries with CVEs) → hand off to `fight-repo-rot`

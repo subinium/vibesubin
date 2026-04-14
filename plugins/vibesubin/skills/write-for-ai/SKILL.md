@@ -288,7 +288,7 @@ Full template in `templates/pr.template.md`.
 - **Don't pad with history.** "This project was originally built in 2021 by Alice..." belongs in a separate `HISTORY.md` if anywhere.
 - **Don't invent sections.** The schema above is the vocabulary. If a section doesn't fit, ask whether the information belongs in a different doc type.
 - **Don't over-emoji.** A single emoji per heading is a structural marker. Ten emojis in a paragraph is noise.
-- **Don't rewrite from scratch.** If a doc already exists, diff against it and preserve every concrete fact (file paths, env vars, numbers, personal names). Use the info-preservation procedure from `refactor-safely`'s references.
+- **Don't rewrite from scratch.** If a doc already exists, diff against it and preserve every concrete fact (file paths, env vars, numbers, personal names). Use the info-preservation procedure from `refactor-verify`'s references.
 - **Don't format-shame existing docs.** If the operator prefers their existing README structure, keep it. Structure is a suggestion; information preservation is an invariant.
 
 ## When to call this skill vs just writing text yourself
@@ -307,7 +307,7 @@ Don't use this skill when:
 
 ## Hand-offs
 
-- If rewriting a doc risks losing concrete facts → borrow the info-preservation check from `refactor-safely` (grep old doc's concrete terms, verify they appear in the new doc, or are deliberately dropped)
+- If rewriting a doc risks losing concrete facts → borrow the info-preservation check from `refactor-verify` (grep old doc's concrete terms, verify they appear in the new doc, or are deliberately dropped)
 - If documenting CI/CD → coordinate with `setup-ci` to make sure commands in the README match the workflow file
 - If documenting branches / config / env → coordinate with `manage-config-env` for the canonical defaults
 

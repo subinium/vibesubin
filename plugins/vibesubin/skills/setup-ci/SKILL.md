@@ -302,7 +302,7 @@ Things to watch for in your own output:
 
 - Deploy touches config files → `manage-config-env` for the `.env` pattern
 - Deploy leaks secrets → `audit-security` immediately
-- Deploy breaks and touches production code → `refactor-safely` for the fix
+- Deploy breaks and touches production code → `refactor-verify` for the fix
 
 ## Details
 

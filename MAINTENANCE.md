@@ -46,7 +46,7 @@ A "failure mode" is a concrete mistake an AI makes during a real session that th
 2. Identify which skill should have caught it.
 3. Add the pattern to that skill's `references/llm-failure-modes.md` (or equivalent).
 4. If applicable, add a detection grep/command to `scripts/`.
-5. Reference the issue in a commit: `fix(refactor-safely): guard against missed callsite after rename (#NN)`.
+5. Reference the issue in a commit: `fix(refactor-verify): guard against missed callsite after rename (#NN)`.
 
 ### When a skill file grows past 500 lines
 
@@ -60,7 +60,7 @@ Claude Code partially reads long SKILL.md files. If any `SKILL.md` exceeds ~500 
 
 The pack aims to be language-agnostic. Adding a new language means:
 
-1. Add an entry to `plugins/vibesubin/skills/refactor-safely/references/language-smoke-tests.md`:
+1. Add an entry to `plugins/vibesubin/skills/refactor-verify/references/language-smoke-tests.md`:
    - Canonical build / typecheck / test command chain
    - Standard linter
    - Common refactoring pitfalls for that language
@@ -76,7 +76,7 @@ Do **not** add a new top-level skill per language. Everything stays language-agn
 
 Some decisions are load-bearing for the pack's identity. Changing them is a major version bump, not a routine update.
 
-- **The 6-step recursive verification procedure.** `refactor-safely/SKILL.md` is built around this. If the sequence changes, every skill that references it needs review.
+- **The 6-step recursive verification procedure.** `refactor-verify/SKILL.md` is built around this. If the sequence changes, every skill that references it needs review.
 - **Tidy First separation.** Structural commits must stay separated from behavioral commits across the entire pack.
 - **Third-person description frontmatter.** Claude's discovery heuristics rely on this. First-person descriptions break triggering.
 - **"One level deep" reference structure.** Never chain `SKILL.md → a.md → b.md`. Always flatten.

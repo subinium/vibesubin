@@ -20,7 +20,7 @@ The maintainer reviews issues and incorporates fixes directly. This keeps the pa
 
 ### Bug in a skill
 
-- Which skill: `refactor-safely`, `audit-security`, etc.
+- Which skill: `refactor-verify`, `audit-security`, etc.
 - What you asked Claude to do
 - What the skill did
 - What it should have done

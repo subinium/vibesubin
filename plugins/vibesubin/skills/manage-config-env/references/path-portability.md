@@ -65,4 +65,4 @@ dataDir := filepath.Join(filepath.Dir(exe), "data")
 
 ## When the audit finds more than a few hits
 
-Hand off to `refactor-safely`. The 1:1 semantic preservation that skill provides is valuable when rewriting path handling across a codebase — the kind of change that silently breaks on a different OS six months later.
+Hand off to `refactor-verify`. The 1:1 semantic preservation that skill provides is valuable when rewriting path handling across a codebase — the kind of change that silently breaks on a different OS six months later.
