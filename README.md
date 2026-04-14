@@ -19,7 +19,7 @@ Install [Claude Code](https://code.claude.com), then run:
 /plugin install vibesubin@vibesubin
 ```
 
-Open a repo. Type `/vibesubin`. Every skill fans out across your code in parallel, read-only, and comes back with a single prioritized report. Nothing is modified until you approve items from the list.
+Open a repo. Type `/vibesubin`. Every skill fans out across your code in parallel, read-only, and comes back with a single prioritized report — nothing is modified until you approve items. When you want a skill to actually *do* the work, call it by name (`/refactor-verify`, `/setup-ci`, etc.) and it edits your files directly.
 
 Using Codex CLI, Cursor, Copilot, or Cline? Jump to [Install](#install).
 
@@ -32,6 +32,15 @@ A small bundle of AI skills — `SKILL.md` files — that your agent picks up au
 The rule every skill shares: **they don't say *done* until they can show you the evidence.** A refactor isn't finished because the AI rewrote the file; it's finished because four independent checks confirm nothing was dropped, moved, or mis-wired. A security sweep isn't a vibes-based paragraph; it's a triaged list where each hit is either real, a false alarm, or flagged for human review, with a file and a line number.
 
 What it is **not**: not a SaaS (nothing leaves your machine), not a compliance tool (no SOC 2 / HIPAA), not a code generator. It improves the repo you already have.
+
+### Read-only sweeps vs. skills that actually edit
+
+This is the thing to get straight early. There are two ways to use the plugin, and they behave very differently.
+
+- **Sweep mode (`/vibesubin`).** Every skill runs in parallel, *read-only*. They produce findings, not fixes. Nothing in your repo changes until you approve items from the report. This is the "I want an honest second opinion" mode.
+- **Direct call (`/refactor-verify`, `/setup-ci`, `/write-for-ai`, `/manage-config-env`).** The skill does its full job, which includes editing files. `refactor-verify` rewrites your code across the dependency tree. `setup-ci` drops working YAML into `.github/workflows/`. `write-for-ai` edits your README. `manage-config-env` scaffolds `.env.example`, `.gitignore`, and touches config files. These are the "do the work" modes.
+
+Two skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions) and **`audit-security`** (static triage report only). Everything else is a real worker skill when called directly, and a read-only reporter when invoked via the sweep.
 
 ### Today's lineup
 

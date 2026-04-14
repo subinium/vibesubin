@@ -19,7 +19,7 @@
 /plugin install vibesubin@vibesubin
 ```
 
-打开一个仓库,输入 `/vibesubin`。所有 skill 会并行地扫一遍你的代码,只读,最后合成一份带优先级的报告。你不点头,什么都不会改。
+打开一个仓库,输入 `/vibesubin`。所有 skill 会并行地扫一遍你的代码,只读,最后合成一份带优先级的报告。你不点头,什么都不会改。想让某个 skill 真的*动手*干活?直接点名调用(`/refactor-verify`、`/setup-ci` 等等),它就会直接改你的文件。
 
 用 Codex CLI、Cursor、Copilot 或 Cline?跳到 [安装](#安装)。
 
@@ -32,6 +32,15 @@
 所有 skill 共享同一条规矩:**拿不出证据,就不许说"完成"。** 重构不是 AI 重写完文件就算完 —— 得四轮独立检查都确认没漏、没串、没接错,才算完。安全扫描也不是靠感觉写一段话,而是一份分类过的清单:每一条要么是真问题、要么是误报、要么标上"需要人工复核",每条都带文件路径和行号。
 
 它**不是**:不是 SaaS(没有任何东西离开你的机器)、不是合规工具(不管 SOC 2 / HIPAA)、也不是代码生成器。它只改善你已经有的那个仓库。
+
+### 只读扫描 vs. 真正会编辑文件的 skill
+
+这件事得早点搞清楚。这个插件有两种用法,行为完全不一样。
+
+- **Sweep 模式(`/vibesubin`)。** 所有 skill 并行跑,*只读*。它们产出的是发现,不是修复。你不从报告里批准,仓库里一个字都不会动。这是"我想要一个诚实的第二意见"的模式。
+- **直接点名(`/refactor-verify`、`/setup-ci`、`/write-for-ai`、`/manage-config-env`)。** skill 把它的完整活干完,包括直接改文件。`refactor-verify` 会沿着依赖树重写你的代码。`setup-ci` 会把能跑的 YAML 扔进 `.github/workflows/`。`write-for-ai` 会动你的 README。`manage-config-env` 会搭出 `.env.example`、`.gitignore`,还会碰你的配置文件。这些是"真的动手干"的模式。
+
+有两个 skill 不管你怎么调都不会编辑文件:**`fight-repo-rot`**(纯诊断 —— 找死代码和气味,删除交给 `refactor-verify`)和 **`audit-security`**(只产出静态筛选报告)。其他 skill 直接点名调用时就是真正动手的 worker,被 sweep 拉进去时就切换成只读的汇报者。
 
 ### 当前阵容
 
