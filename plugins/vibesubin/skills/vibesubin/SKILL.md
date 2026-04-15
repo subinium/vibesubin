@@ -322,6 +322,14 @@ User request
 │      / "브랜드 일관성" / "디자인 통일"
 │   → unify-design
 │
+├── Contains "codex 돌려서 고쳐" / "codex fix" / "rescue 돌리고 수정"
+│      / "run codex and fix" / "codex로 한번 검사" / "codex driven fix"
+│   → codex-fix (Claude Code + Codex plugin only; graceful one-line pass on every other host)
+│
+├── Contains "resolve these findings" / "fix this review" / "리뷰 사항 처리"
+│      / "이 리뷰 고쳐줘" / pasted review reports with file:line references
+│   → refactor-verify (review-driven fix mode — portable, any review source)
+│
 ├── Contains "full check" / "run vibesubin" / "vibe check" / "everything"
 │   → MODE 1 (full sweep)
 │

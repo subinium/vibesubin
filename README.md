@@ -39,8 +39,9 @@ This is the thing to get straight early. There are two ways to use the plugin, a
 
 - **Sweep mode (`/vibesubin`).** Every skill runs in parallel, *read-only*. They produce findings, not fixes. Nothing in your repo changes until you approve items from the report. This is the "I want an honest second opinion" mode.
 - **Direct call (`/refactor-verify`, `/setup-ci`, `/write-for-ai`, `/manage-secrets-env`, `/project-conventions`, `/unify-design`).** The skill does its full job, which includes editing files. `refactor-verify` rewrites your code across the dependency tree. `setup-ci` drops working YAML into `.github/workflows/`. `write-for-ai` edits your README. `manage-secrets-env` scaffolds `.env.example`, `.gitignore`, and runs the full secret lifecycle. `project-conventions` scaffolds Dependabot, enforces pinning, fixes hardcoded paths. `unify-design` scaffolds the tokens file and rewrites components to reference it. These are the "do the work" modes.
+- **Direct call, host-specific (`/codex-fix`).** A thin wrapper for one workflow: invoke `/codex:rescue` on the current branch, hand the findings to `refactor-verify`'s review-driven fix mode, resolve with the standard 4-check verification. Requires Claude Code with the Codex plugin installed; on every other host the skill emits a one-line fallback and exits cleanly. The portable engine lives in `/refactor-verify` — if your review source is anything other than Codex (pasted notes, PR review, Sentry, a scanner), invoke `/refactor-verify` directly instead.
 
-Three skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions), **`audit-security`** (static triage report only), and **`manage-assets`** (bloat report only — never rewrites history, never deletes files). Everything else — `refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design` — is a real worker skill when called directly, and a read-only reporter when invoked via the sweep.
+Three skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions), **`audit-security`** (static triage report only), and **`manage-assets`** (bloat report only — never rewrites history, never deletes files). Six skills — `refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design` — are real workers when called directly and read-only reporters when invoked via the sweep. One skill — `codex-fix` — is a thin Claude Code + Codex wrapper that runs only on direct call, is not part of the sweep, and emits a graceful one-line fallback on every other host.
 
 ### Today's lineup
 
@@ -55,6 +56,7 @@ Three skills never edit regardless of how you call them: **`fight-repo-rot`** (p
 | [`project-conventions`](#7-project-conventions) | *"main or dev branch?"*, *"should I pin this dep?"*, *"hardcoded path?"* | One default per decision — GitHub Flow, pinned deps, domain-first layout, no home-dir in source |
 | [`manage-assets`](#8-manage-assets) | *"my repo is huge"*, *"should I use LFS?"* | Bloat report — large files, big blobs in git history, LFS candidates. Pure diagnosis — never rewrites history |
 | [`unify-design`](#9-unify-design) | *"unify the buttons"*, *"these pages look different"*, *"extract these colors to tokens"* | A design-system audit — scaffolds the tokens file if missing, finds every hardcoded hex and magic px, consolidates duplicate components |
+| [`codex-fix`](#10-codex-fix) | *"codex 돌려서 고쳐줘"*, *"run codex and fix"*, *"codex driven fix"* | Thin post-edit wrapper — invokes `/codex:rescue` on the current branch, hands the findings to `refactor-verify` for verified resolution. **Claude Code + Codex plugin only**; graceful one-line fallback on every other host |
 
 New skills drop into `plugins/vibesubin/skills/` and are picked up by `/vibesubin` automatically.
 
@@ -206,6 +208,18 @@ It does three things. First, it establishes the source of truth: if there's no t
 
 Two things it won't do on purpose: invent a brand when the project has none (it asks), and rewrite across frameworks (if you're on styled-components, it uses your theme object, not Tailwind's).
 
+### 10. `codex-fix`
+
+The pack's first — and intentionally only — host-specific skill. It exists because one specific workflow happens often enough for one specific operator to justify a worker slot: *"I've finished a batch of edits. Run Codex for a second-model review. Feed the findings back. Let Claude resolve them with verification."* The copy-paste step between Codex output and Claude resolution was adding friction session after session, so `codex-fix` automates it.
+
+It is deliberately thin — about 100 lines — because it delegates everything substantial to `refactor-verify`'s review-driven fix mode. This wrapper owns only the Codex-specific glue: the host check, the templated `/codex:rescue` prompt scoped to the current branch's diff, the output collection, and the hand-off. Parsing findings, triaging real / false-positive / defer / duplicate, mapping each item to a commit via `git blame`, planning the dependency tree, executing leaves-up with the 4-check verification, committing with back-references to the review items — all of that belongs to `refactor-verify`.
+
+**Host requirement.** This skill only fires on Claude Code with the Codex plugin installed. On every other host (Codex CLI itself, Cursor, Copilot, Cline, or Claude Code without the plugin), its first action is a graceful one-line fallback and exit: *"Codex plugin not detected — this skill is Claude Code + Codex specific. For review-driven fixes from a different source, invoke `/refactor-verify` directly with the findings."* It never hangs, never errors loudly.
+
+**When to prefer this vs. `/refactor-verify` directly.** Use `/codex-fix` if you are on Claude Code + Codex *and* the review source is Codex. Use `/refactor-verify` directly (with pasted findings) if the review source is anything else — human PR review, Sentry alert, `gitleaks`, Semgrep, GitHub Advanced Security, manual notes. Same engine, different input path.
+
+This is the pack's first **host-locked** skill and is covered by the portable-engine-plus-thin-wrapper pattern documented as rule 9 in [`docs/PHILOSOPHY.md`](./docs/PHILOSOPHY.md). Future wrappers for other input sources (Sentry, gitleaks, etc.) should follow the same shape: thin glue around the portable engine, with the host dependency declared explicitly in frontmatter and a graceful fallback as the first action.
+
 ---
 
 ## Using it day to day
@@ -224,6 +238,7 @@ Every skill follows the same four-part output shape: what it did, what it found,
 - **Starting from scratch.** `manage-secrets-env` scaffolds `.env.example` and `.gitignore` → `project-conventions` scaffolds Dependabot and a branch note → `setup-ci` lays down workflows → `write-for-ai` writes README and `CLAUDE.md`.
 - **"Why is my repo so big?"** `manage-assets` runs the bloat report → `refactor-verify` executes any history rewrite or LFS migration with verification.
 - **"Why do my pages all look slightly different?"** `unify-design` scaffolds the tokens file (if missing), audits the drift, and rewrites components back to tokens → `refactor-verify` handles the multi-file consolidation.
+- **"End-of-edit Codex loop" (Claude Code + Codex plugin only).** Finish a batch of edits → `codex-fix` invokes `/codex:rescue` on the branch diff → hand-off to `refactor-verify`'s review-driven fix mode → triaged, verified, committed with back-references. On any other host or from any other review source (PR review, Sentry, scanner, pasted notes), invoke `/refactor-verify` directly with the findings — same engine, different input path.
 
 You don't plan these yourself; the skills suggest the next hand-off when it makes sense.
 

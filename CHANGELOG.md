@@ -4,6 +4,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-04-15
+
+### Added
+
+- `refactor-verify/SKILL.md` — new "Review-driven fix mode" section. Accepts external review reports from any source (pasted notes, PR review, Sentry alert, `gitleaks`/`pip-audit`/`cargo audit`/`govulncheck`, Semgrep/Bandit, hand-off from a wrapper skill). Procedure: capture review snapshot SHA, capture recent commit context (`git log`, `git diff --stat`, `git status`), parse and normalize findings, triage each (real / false-positive / defer / duplicate), plan as dependency tree, execute leaves-up with 4-check verification (relaxed AST-diff for intentionally behavior-changing fixes, full call-site closure on the untouched surface), commit each fix with a back-reference to the review item (`<type>(<scope>): resolve <review-source>#<item-id> — <subject>`), produce a resolution report table.
+- `codex-fix` skill — thin Claude Code + Codex plugin wrapper (~100 lines). Direct-call only; not part of the `/vibesubin` parallel sweep. First action: host check for `/codex:rescue` availability. On matching host: capture branch diff scope (`BASE = merge-base HEAD main`, `REVIEW_SHA = git rev-parse HEAD`, `git diff --stat`, `git log`, `git status`), warn if working tree is dirty, invoke `/codex:rescue` with a templated prompt (security / correctness / performance / resource management / concurrency categories), collect raw findings, hand off to `refactor-verify`'s review-driven fix mode with `review_source=codex-rescue`, `review_sha`, `findings_raw`, `branch_context`. On any non-matching host: emit one-line fallback (*"Codex plugin not detected — this skill is Claude Code + Codex specific..."*) and exit without error.
+- `docs/PHILOSOPHY.md` — new invariant 9 "Portable engines can have host-specific wrappers". Wrappers declare host dependency in frontmatter, check host as first action, emit graceful one-line fallback on non-matching hosts, delegate everything substantial to a portable engine skill, have no sweep mode. Load-bearing-vs-flexible summary updated from "seven rules above" to "nine rules above".
+- `vibesubin/SKILL.md` routing tree — two new branches: one for `codex-fix` triggers (`"codex 돌려서 고쳐"`, `"codex fix"`, `"rescue 돌리고 수정"`, `"run codex and fix"`, `"codex로 한번 검사"`, `"codex driven fix"`), and one for `refactor-verify` review-driven mode triggers (`"resolve these findings"`, `"fix this review"`, `"리뷰 사항 처리"`, `"이 리뷰 고쳐줘"`, pasted review reports).
+- `README.md` skill table — row 10 for `codex-fix` with explicit host-requirement note. New § 10 section covering the skill's rationale, thinness, host requirement, `/codex-fix` vs `/refactor-verify` direct-call decision table, and link to invariant 9. Direct-call list adds `/codex-fix` as a host-specific entry. "Three skills never edit" phrasing updated to split the 10 workers into "three never-edit (fight-repo-rot, audit-security, manage-assets) / six real workers / one host-specific wrapper". New "End-of-edit Codex loop" workflow bullet.
+- `README.ko.md`, `README.ja.md`, `README.zh.md` — matching targeted edits in natural voice for each language: direct-call list bullet, three-skills phrasing, skill table row, § 10 section, workflow bullet. No prose or section restructuring.
+
+### Changed
+
+- Plugin version `0.3.1` → `0.3.2` in `.claude-plugin/marketplace.json` and `plugins/vibesubin/.claude-plugin/plugin.json`. Both descriptions updated to note the Codex wrapper.
+- Pack worker count: 9 → 10 (umbrella not counted). The 10-worker cap is now exactly reached; any future new capability must extend, split, or displace an existing skill.
+- `CLAUDE.md` — "Never add a new worker skill past 10" updated to note the cap is now reached and to enumerate the 10 slots. "Recently decided" section adds the portable-engine-plus-thin-wrapper precedent (invariant 9) decided 2026-04-15.
+
 ## [0.3.1] — 2026-04-15
 
 ### Added
@@ -119,7 +136,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - Install paths: Claude Code marketplace, `skills.sh`, manual symlink.
 - READMEs: EN / KO / JA / ZH.
 
-[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/subinium/vibesubin/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/subinium/vibesubin/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/subinium/vibesubin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/subinium/vibesubin/compare/v0.1.0...v0.2.0

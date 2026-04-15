@@ -34,11 +34,24 @@ Harsh mode drops hedging language. It never inflates severity, fabricates findin
 
 Documentation written by the pack does not oversell, does not embellish, does not describe features that don't exist, and does not use marketing language where plain language fits. "Fast" without a benchmark is a lie. "Best-in-class" without a comparison is marketing noise. "Works" without a verification command is a claim. The `write-for-ai` skill enforces this on every doc it produces.
 
+## 9. Portable engines can have host-specific wrappers
+
+The pack's core skills are host-agnostic — they work on Claude Code, Codex CLI, Cursor, Copilot, Cline, or any agent that supports `SKILL.md` files. When a specific operator's workflow benefits from a host-specific convenience (e.g., auto-invoking a plugin's slash command to pipe its output into a portable skill), that convenience belongs in a thin **wrapper skill**, not in the core.
+
+A wrapper skill:
+
+- Declares its host dependency explicitly in `description` and `when_to_use`.
+- Checks the host as its first action and emits a graceful one-line fallback on non-matching hosts — it never hangs, errors loudly, or blocks the workflow.
+- Delegates everything substantial to a portable engine skill. The wrapper owns the invocation glue; the engine owns the logic.
+- Has no sweep mode (wrappers are direct-call only — they invoke external tools and write files, which break the sweep's read-only + portable invariants).
+
+Wrappers exist because a specific workflow is **frequent enough** to justify a worker slot for one operator's habit — not because every input source deserves its own skill. The engine is the contract; the wrapper is convenience. The first wrapper in the pack is `codex-fix`, delegating to `refactor-verify`'s review-driven fix mode.
+
 ## What is load-bearing vs. what is flexible
 
 Changing any of the rules above is a major version bump. Changing specific tooling recommendations, thresholds, or language coverage is routine.
 
-- **Load-bearing** (major version bump if changed): the seven rules above, the 6-step refactor-verify procedure, Tidy First separation, the `sweep=read-only` marker protocol, third-person frontmatter descriptions, the one-level-deep reference structure, the issue-only contribution model.
+- **Load-bearing** (major version bump if changed): the nine rules above, the 6-step refactor-verify procedure, Tidy First separation, the `sweep=read-only` marker protocol, third-person frontmatter descriptions, the one-level-deep reference structure, the issue-only contribution model.
 - **Flexible** (routine updates): specific linter names, specific LOC thresholds, specific deploy targets, specific language-smoke-test commands, the set of skills in the pack, per-version phrasing of individual skills.
 
 See [`MAINTENANCE.md`](../MAINTENANCE.md) for the cadence.
