@@ -56,7 +56,7 @@ AI スキルの小さなバンドルです。`SKILL.md` ファイル群で構成
 | [`project-conventions`](#7-project-conventions) | *「main と dev どっち?」*、*「この依存ピン留めする?」*、*「ハードコードされたパス?」* | 決定ごとにデフォルトひとつ — GitHub Flow、ピン留めされた依存、ドメインファーストのレイアウト、ソースにホームディレクトリを書かない |
 | [`manage-assets`](#8-manage-assets) | *「リポが重すぎる」*、*「LFS 使うべき?」* | 肥大化レポート — 大きなファイル、git 履歴内の巨大 blob、LFS 候補。純粋な診断 — 履歴の書き換えはしません |
 | [`unify-design`](#9-unify-design) | *「ボタンを統一して」*、*「ページごとに見た目が違う」*、*「この色をトークンに抽出して」* | デザインシステム監査 — トークンファイルがなければ足場組み、ハードコードされた hex と魔法の px を全部見つけ、重複したコンポーネントを統合 |
-| [`codex-fix`](#10-codex-fix) | *「codex 돌려서 고쳐줘」*、*「run codex and fix」*、*「codex driven fix」* | 薄い post-edit wrapper — `/codex:rescue` を現在のブランチに実行して findings を受け取り、`refactor-verify` に渡して検証付きで解決。**Claude Code と Codex プラグイン専用**、他のホストでは一行の fallback を出して終了 |
+| [`codex-fix`](#10-codex-fix) | *「Codex でチェックして直して」*、*「codex fix」*、*「run codex and fix」* | 薄い post-edit wrapper — `/codex:rescue` を現在のブランチに実行して findings を受け取り、`refactor-verify` に渡して検証付きで解決。**Claude Code と Codex プラグイン専用**、他のホストでは一行の fallback を出して終了 |
 
 新しいスキルは `plugins/vibesubin/skills/` に置けば `/vibesubin` が自動で拾います。
 

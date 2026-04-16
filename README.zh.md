@@ -56,7 +56,7 @@
 | [`project-conventions`](#7-project-conventions) | *"main 还是 dev 分支"*、*"这个依赖要不要锁"*、*"硬编码路径"* | 每个决定一个默认值 —— GitHub Flow、锁版本的依赖、按领域划分的目录、源码里不留家目录 |
 | [`manage-assets`](#8-manage-assets) | *"我的 repo 太大了"*、*"要不要用 LFS"* | 臃肿报告 —— 大文件、git 历史里的大 blob、LFS 候选。纯诊断 —— 不重写历史 |
 | [`unify-design`](#9-unify-design) | *"把按钮统一一下"*、*"这两页看起来不一样"*、*"把这些颜色抽成 token"* | 设计系统审计 —— 没有 tokens 文件就搭一个,把所有硬编码的 hex 和魔法 px 都找出来,合并重复组件 |
-| [`codex-fix`](#10-codex-fix) | *"codex 돌려서 고쳐줘"*、*"run codex and fix"*、*"codex driven fix"* | 薄的 post-edit 壳 —— 在当前分支运行 `/codex:rescue`,把 findings 交给 `refactor-verify` 带验证解决。**只在 Claude Code 加 Codex 插件** 下运行,其他宿主下只输出一行 fallback |
+| [`codex-fix`](#10-codex-fix) | *"用 codex 跑一遍再修"*、*"codex fix"*、*"run codex and fix"* | 薄的 post-edit 壳 —— 在当前分支运行 `/codex:rescue`,把 findings 交给 `refactor-verify` 带验证解决。**只在 Claude Code 加 Codex 插件** 下运行,其他宿主下只输出一行 fallback |
 
 新 skill 扔进 `plugins/vibesubin/skills/`,`/vibesubin` 就会自动捡起来。
 

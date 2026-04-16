@@ -2,7 +2,7 @@
 name: codex-fix
 description: Post-edit loop that invokes `/codex:rescue` for a second-model review of the current branch, collects the findings, and hands them off to `refactor-verify`'s review-driven fix mode for triage, verification, and committed resolution. A thin host-specific wrapper — the portable review-driven engine lives in `refactor-verify`. Requires Claude Code with the Codex plugin installed; on every other host the skill emits a one-line fallback and exits without error. Operators whose review findings come from any other source (pasted notes, human PR review, Sentry alert, gitleaks output, Semgrep report, GitHub Advanced Security) should invoke `refactor-verify` directly and skip this wrapper entirely.
 when_to_use: Trigger on "codex 돌려서 고쳐줘", "codex로 한번 검사하고 수정", "codex fix", "codex driven fix", "rescue 돌리고 수정해줘", "run codex rescue and fix", "/codex-fix", typically at the end of a batch of edits and before a merge. For review-driven fixes from any other source (pasted findings, a PR review, a scanner report, Sentry), skip this wrapper and invoke `refactor-verify` directly with the findings — the engine is the same, only the input adapter differs.
-allowed-tools: Read Grep Glob Bash(git diff *) Bash(git log *) Bash(git status *) Bash(git rev-parse *) Bash(git merge-base *) Bash(git blame *)
+allowed-tools: Read Grep Glob Task Bash(git diff *) Bash(git log *) Bash(git status *) Bash(git rev-parse *) Bash(git merge-base *) Bash(git blame *) Bash(ls *) Bash(test *)
 ---
 
 # codex-fix
@@ -19,11 +19,20 @@ This skill only fires on **Claude Code with the Codex plugin installed**. On eve
 
 ## Procedure
 
-**1. Check host.** Confirm `/codex:rescue` is available in the current session. If the command is not registered — because the Codex plugin is not installed, or the session is not Claude Code, or the plugin is disabled — respond with exactly one sentence and stop:
+**1. Check host — confirm the Codex rescue subagent is registered.** This skill invokes Codex via the `Task` tool with `subagent_type: "codex:codex-rescue"`. That subagent is only registered when the Codex plugin is installed on a Claude Code session. Before attempting the Task call, verify availability via either of these detection paths:
+
+- **Primary — inspect the available-subagents list.** Claude Code populates the available-subagents list at session start from installed plugins. Check whether `codex:codex-rescue` appears as a valid `subagent_type` in the current context. If yes, proceed. If no, fall through to the secondary path before giving up.
+- **Secondary — filesystem check.**
+  ```bash
+  test -d "$HOME/.claude/plugins/codex" && echo "plugin-installed" || echo "plugin-missing"
+  ```
+  If the directory exists but the subagent is still not in the available-subagents list (e.g., the plugin is disabled or its registration step failed), treat that as "not available" and fall through — a present-but-non-functional plugin should still trigger graceful pass, not a half-broken attempt.
+
+**If neither path confirms the subagent is registered**, respond with exactly one sentence and stop:
 
 > *"Codex plugin not detected — this skill is Claude Code + Codex specific. To resolve a review from a different source (pasted findings, a PR review, a scanner report), invoke `/refactor-verify` directly with the findings."*
 
-No retry loop, no stack trace, no pasted-findings prompt. Graceful pass is the expected outcome on non-matching hosts, and it is **not an error** — just log it and stop.
+No retry loop, no stack trace, no pasted-findings prompt. **Graceful pass is the expected outcome on non-matching hosts**, and it is **not an error** — just log it and stop.
 
 **2. Capture the branch state as the review scope.** The default scope is the current branch's diff against its base — not the whole repo. Reviewing the whole repo is what `/vibesubin` is for.
 
@@ -39,26 +48,37 @@ git status                              # current dirty state
 
 If the working tree is dirty, warn the operator: *"Uncommitted changes present. Codex should review a clean snapshot — commit or stash before the review?"* Do not proceed without confirmation. A dirty review snapshot injects bugs because Codex's findings become ambiguous (was it fixed in the uncommitted diff or not?).
 
-**3. Invoke `/codex:rescue` with the templated prompt.** The prompt scopes the review to the branch diff, names the categories the operator cares about, and asks for a structured response:
+**3. Invoke the Codex rescue subagent via the `Task` tool.** **Do not** write `/codex:rescue ...` as plain text in your response — slash-command text inside a response body is just a text string and does nothing. The actual invocation mechanism is a `Task` tool call with `subagent_type: "codex:codex-rescue"`. The prompt scopes the review to the branch diff and names the categories the operator cares about:
 
 ```
-/codex:rescue Run a deep code review of the current branch's changes
-($BASE..HEAD). Return findings as markdown with file:line references.
-Focus on: (1) security — injection, auth bypass, secret exposure,
-unsafe deserialization; (2) correctness — null handling, race
-conditions, error swallowing, off-by-one, incorrect async; (3)
-performance — N+1 queries, hot-path allocations, unnecessary work;
-(4) resource management — connection leaks, handle leaks, memory
-leaks, missing cleanup; (5) concurrency — unsynchronized shared
-state, deadlock risk, TOCTOU bugs.
+Task(
+  subagent_type = "codex:codex-rescue",
+  description   = "Deep code review of branch diff",
+  prompt        = """
+    Run a deep code review of the current branch's changes
+    ($BASE..HEAD, where $BASE is the captured base-branch merge-base).
+    Return findings as markdown with file:line references.
 
-One finding per bullet. Each finding: file:line, one-line description,
-severity (CRITICAL / HIGH / MEDIUM / LOW). Skip style nits and missing
-comments unless they hide a bug. If the diff is clean, say so
-explicitly and return an empty findings list.
+    Focus on:
+    (1) security — injection, auth bypass, secret exposure, unsafe deserialization;
+    (2) correctness — null handling, race conditions, error swallowing,
+        off-by-one, incorrect async;
+    (3) performance — N+1 queries, hot-path allocations, unnecessary work;
+    (4) resource management — connection leaks, handle leaks, memory leaks,
+        missing cleanup;
+    (5) concurrency — unsynchronized shared state, deadlock risk, TOCTOU bugs.
+
+    One finding per bullet. Each finding: file:line, one-line description,
+    severity (CRITICAL / HIGH / MEDIUM / LOW). Skip style nits and missing
+    comments unless they hide a bug. If the diff is clean, say so explicitly
+    and return an empty findings list.
+  """
+)
 ```
 
-Collect Codex's response as raw markdown. **Do not interpret it here** — parsing and triage belong to `refactor-verify`, not this wrapper.
+The `Task` tool returns the subagent's output as a single result message. Collect that output as raw markdown. **Do not interpret it here** — parsing and triage belong to `refactor-verify`, not this wrapper.
+
+**If the `Task` call itself fails** (subagent disabled mid-call, Codex CLI timeout, unexpected subagent error), do not retry automatically. Emit a one-line failure that references the underlying error category — *"Codex rescue failed: `<error summary>`. Falling back — invoke `/refactor-verify` directly with manually-pasted review findings if you still want to run the post-edit loop."* — and stop. A failed subagent invocation is a transient state, not a bug in this wrapper.
 
 **4. Hand off to `refactor-verify`'s review-driven fix mode.** Pass the following as structured input:
 
@@ -79,6 +99,7 @@ Collect Codex's response as raw markdown. **Do not interpret it here** — parsi
 - **Don't participate in the `/vibesubin` parallel sweep.** This wrapper is direct-call only. The umbrella does not launch it. It requires an external model and writes files; both break the sweep's read-only + portable invariants. If a future maintainer tries to add this skill to the umbrella's parallel launch block, stop and read `docs/PHILOSOPHY.md` rule 9.
 - **Don't add a sweep-mode section to this SKILL.md.** Its absence is deliberate. Documented here explicitly so a future maintainer does not "fix" it by adding one.
 - **Don't duplicate the review-driven procedure from `refactor-verify`.** If you find yourself writing parsing logic, triage logic, dependency-tree planning, or verification code in this wrapper, stop — that content belongs in `refactor-verify`. Delete it here and extend `refactor-verify` instead.
+- **Don't write `/codex:rescue ...` as plain text in a response.** Slash-command text inside a response body is just a text string — it does not execute the slash command and does not dispatch the plugin. The actual invocation mechanism is the `Task` tool with `subagent_type: "codex:codex-rescue"`. If you find yourself about to paste slash-command text into a response as if it were an instruction, stop — that was the 0.3.2 bug and 0.3.3 fixed it precisely to prevent that regression.
 
 ## Harsh mode
 

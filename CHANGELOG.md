@@ -4,6 +4,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.3.3] — 2026-04-15
+
+### Fixed
+
+- `codex-fix/SKILL.md` — the 0.3.2 version instructed Claude to *"invoke `/codex:rescue` with the templated prompt"* and embedded a code block with plain-text slash-command syntax. Slash-command text inside a response body is just a text string and does nothing — it does not execute the slash command and does not dispatch the Codex plugin. The skill now invokes the Codex rescue subagent via the `Task` tool with `subagent_type: "codex:codex-rescue"`, which is the actual Claude Code plugin dispatch mechanism. The templated prompt is passed as the `prompt` argument of the Task call.
+- `codex-fix/SKILL.md` frontmatter `allowed-tools` — added `Task`, `Bash(ls *)`, and `Bash(test *)`. Without `Task` the skill could not invoke the subagent at all; without `ls` / `test` the filesystem-based plugin-presence check could not run. The 0.3.2 allowed-tools list omitted all three.
+- `codex-fix/SKILL.md` Step 1 (host check) — now documents two detection paths: primary (inspect Claude Code's available-subagents list for `codex:codex-rescue`) and secondary (filesystem check `test -d ~/.claude/plugins/codex`). Previously the check was described as "confirm `/codex:rescue` is available" without specifying the mechanism, which led to the subagent-invocation regression above.
+- `codex-fix/SKILL.md` Step 3 (invocation) — rewritten from a plain-text slash-command block to an explicit `Task(subagent_type="codex:codex-rescue", description, prompt)` tool call. The templated review prompt is unchanged; only the dispatch mechanism is fixed. New paragraph added: if the `Task` call itself fails (subagent disabled mid-call, Codex CLI timeout, unexpected subagent error), emit a one-line failure that references the underlying error and stop — do not retry automatically.
+- `codex-fix/SKILL.md` "Things not to do" — new bullet: *"Don't write `/codex:rescue ...` as plain text in a response."* Documents the 0.3.2 regression explicitly so future maintainers do not reintroduce it.
+- `README.ja.md` — skill-table trigger examples for `codex-fix` on line 59 were in Korean (`「codex 돌려서 고쳐줘」`, `「run codex and fix」`, `「codex driven fix」`) in 0.3.2 because the ko/ja batch copied without per-language localization. Replaced with Japanese equivalents (`「Codex でチェックして直して」`, `「codex fix」`, `「run codex and fix」`).
+- `README.zh.md` — same translation leakage as above on line 59. Replaced with Chinese equivalents (`"用 codex 跑一遍再修"`, `"codex fix"`, `"run codex and fix"`).
+- `README.ko.md` § 10 — two minor prose-polish fixes: `"의도된 유일한"` → `"의도적으로 유일한"` (less translated feel), and `"소리내서 에러나지 않아요"` → `"시끄럽게 에러를 뱉지도 않습니다"` (more idiomatic).
+
+### Changed
+
+- Plugin version `0.3.2` → `0.3.3` in `.claude-plugin/marketplace.json` and `plugins/vibesubin/.claude-plugin/plugin.json`.
+
 ## [0.3.2] — 2026-04-15
 
 ### Added
@@ -136,7 +153,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 - Install paths: Claude Code marketplace, `skills.sh`, manual symlink.
 - READMEs: EN / KO / JA / ZH.
 
-[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/subinium/vibesubin/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/subinium/vibesubin/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/subinium/vibesubin/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/subinium/vibesubin/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/subinium/vibesubin/compare/v0.2.0...v0.3.0
