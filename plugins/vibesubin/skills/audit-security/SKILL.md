@@ -41,6 +41,33 @@ Before running, establish three things with the operator. Do not start the sweep
 
 If the operator doesn't know the answers, pick the most conservative defaults: whole repo, report all, assume public-facing. Tell them that's what you picked.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Exposure surface:  <public-web | internal | CLI | library>
+- Language/framework: <detected set — e.g., Next.js + Python API>
+- Existing scanners: <none | Dependabot | Semgrep | GHAS — affects which patterns this sweep adds vs duplicates>
+- Scope:             <whole repo | subdirectory path | single file>
+```
+
+Typical items for this skill:
+
+- The repo's exposure surface (public-web / internal / CLI / library)
+- Language and framework set (affects which pattern families apply)
+- Whether CI already runs scanners (affects what the manual sweep should add versus duplicate)
+
+Stop-and-ask triggers:
+
+- Scope is "the whole repo" but LOC > 50k — offer to scope by directory first
+- "Audit" without a layer hint — ask server-side / client-side / dependencies / all
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## The patterns (what to sweep)
 
 These are the ten categories. Each category has language-specific grep/AST patterns in `references/patterns.md`. Run them all; don't skip any for time.
@@ -287,6 +314,7 @@ Add these guards before closing the incident:
 - **Don't be decorative.** No banners, no ASCII art, no emojis beyond what the operator uses. The report is a tool, not a trophy.
 - **Don't pretend to be a compliance audit.** This skill finds technical issues. SOC 2 / HIPAA / PCI-DSS require a different kind of review.
 - **Don't fix things on your own beyond CRITICAL.** Report, let the operator decide. Especially for "fixes" that touch business logic — what looks like a simple param sanitization might break a workflow.
+- **Don't expand the audit scope beyond what was asked.** If the sweep scope was "auth code only" and you notice a SQL injection in the payments module, report it as a hand-off finding — do not quietly expand the sweep to cover it. Scope expansion corrupts the triage ratio and trains the operator to distrust bounded requests.
 
 ## Common AI failure modes around security
 

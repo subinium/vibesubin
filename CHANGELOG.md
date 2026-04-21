@@ -4,6 +4,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-04-21
+
+### Added
+
+- `ship-cycle` skill — the 11th worker and the pack's first process-category skill. Issue-driven development orchestrator. Direct-call only; not part of the `/vibesubin` parallel sweep. Host requirement — GitHub repo with authenticated `gh` CLI; graceful one-line fallback on any other host. 11-step procedure: host check, state assumptions, language elicitation (Korean / English / Japanese / Chinese), intake (pasted list / `/vibesubin` sweep output / named scope), draft bilingual issues, cluster into milestones by semver rules (bug / perf / refactor / test / docs-only → patch; additive feature → minor; breaking → major) with ~5-item patch cap, confirm plan with operator, `gh issue create` per item, branch scaffolding `issue-<N>-<slug>`, per-label hand-off to the right worker (bug / refactor → `refactor-verify`; security → `audit-security` chained to `refactor-verify`; docs → `write-for-ai`; CI → `setup-ci`; secrets → `manage-secrets-env`; deps / branches → `project-conventions`; design → `unify-design`; perf → `refactor-verify` with perf focus), release pipeline (aggregate closed issues → functional-only CHANGELOG entry → bump both manifests → commit → annotated tag → `gh release create` → verify with `gh release view`), close-comment and milestone close for audit trail.
+- `ship-cycle/references/issue-body-template.md` — bilingual issue body template. Section headings stay in English (Problem / Acceptance criteria / Implementation notes / Linked) for `gh` parsing stability; body prose in operator-chosen language.
+- `ship-cycle/references/milestone-rules.md` — semver cadence decision tree with worked examples, ~5-item patch cap, same-milestone clustering heuristics.
+- `ship-cycle/references/release-pipeline.md` — actionable release checklist mirroring the process in root `CLAUDE.md`.
+- `## State assumptions — before acting` section in all 10 existing worker skills (`refactor-verify`, `audit-security`, `fight-repo-rot`, `write-for-ai`, `setup-ci`, `manage-secrets-env`, `project-conventions`, `manage-assets`, `unify-design`, `codex-fix`). Each section surfaces an explicit `Assumptions` block (input shape / environment / intent) before any procedural step, with skill-specific typical items and stop-and-ask triggers. Karpathy Principle 1 (Think Before Coding) enforced in-skill, not via pack philosophy alone.
+- `## Things not to do` now includes the universal bullet *"Don't add features the operator did not request"* in all 10 existing worker skills. Karpathy Principle 2 (Simplicity First) enforced as a local invariant in every skill.
+- `docs/PHILOSOPHY.md` invariant #10 — "Code hygiene and process are different categories". Documents the 10-hygiene + 1-process split and why the two buckets do not share a cap.
+- `README.md`, `README.ko.md`, `README.ja.md`, `README.zh.md` — new § 11 `ship-cycle` section in each, skill-table row 11 with locale-appropriate trigger phrases, new workflow bullet *"Planning a release"* in the four language variants, and the *"Read-only sweeps vs. skills that actually edit"* subsection updated from 3 + 6 + 1 to 3 + 6 + 2 with explicit "10 code-hygiene workers + 1 process worker" category framing.
+
+### Changed
+
+- Plugin version `0.3.3` → `0.4.0` in `.claude-plugin/marketplace.json` and `plugins/vibesubin/.claude-plugin/plugin.json`. Minor bump reflects one new worker skill and one new skill category.
+- Plugin descriptions in both manifests updated to mention the new issue-driven release-cycle orchestrator.
+- `CLAUDE.md` never-do #2 — rewritten from *"Never add a new worker skill past 10"* to *"Never add a new worker skill past the 10 + 1 category cap"*. As of v0.4.0 all 11 slots are used: 10 code hygiene (`refactor-verify`, `audit-security`, `fight-repo-rot`, `write-for-ai`, `setup-ci`, `manage-secrets-env`, `project-conventions`, `manage-assets`, `unify-design`, `codex-fix`) + 1 process (`ship-cycle`). Each category has its own cap; future growth must extend, split, or displace within the category.
+- `CLAUDE.md` change-type matrix — added "Cut a release via ship-cycle" row pointing the end-to-end flow at the new skill.
+- `CLAUDE.md` load-bearing invariants table — added "Category split is enforced (10 hygiene + 1 process)" row with violation symptom documented.
+- `CLAUDE.md` "Recently decided" — two new 2026-04-21 entries: the 10 + 1 category split decision, and the karpathy-principles internalization decision (no README shoutout — the four principles are now first-class vibesubin invariants enforced in every worker).
+- `docs/PHILOSOPHY.md` "Load-bearing vs flexible" — updated *"the nine rules above"* to *"the ten rules above"* following the addition of invariant #10.
+- `plugins/vibesubin/skills/vibesubin/SKILL.md` routing tree — new branch for `ship-cycle` trigger phrases (*"plan a release"*, *"이슈로 남기고 처리"*, *"cut a release"*, *"이슈 드리븐"*, *"리리즈 계획"*, *"bundle these findings into issues"*, etc.). Branch documents the GitHub + `gh` host requirement and graceful fallback.
+- `plugins/vibesubin/skills/vibesubin/SKILL.md` integration notes — new bullet on post-sweep issue generation: after the sweep, the operator invokes `/ship-cycle` explicitly with the sweep output as input. The parallel sweep launch block stays at exactly 9 specialists — `ship-cycle` is not added, consistent with the wrapper-skills-don't-sweep rule established with `codex-fix`.
+
 ## [0.3.3] — 2026-04-15
 
 ### Fixed

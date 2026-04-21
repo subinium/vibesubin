@@ -29,6 +29,34 @@ A change is **not done** until all four of these pass:
 
 If any of the four fails, fix it and re-run all four. Do not partially claim success.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Change type:       <move | rename | split | merge | extract | inline | delete>
+- Scope files:       <list of files in scope — everything else untouched>
+- Baseline status:   <green (tests + typecheck + lint pass) | red (report blocks before touching anything)>
+- Delete confidence: <N/A | HIGH (auto-ok) | MEDIUM (operator confirms) | LOW (require explicit approval)>
+```
+
+Typical items for this skill:
+
+- The change type named (move / rename / split / merge / extract / inline / delete)
+- The files or symbols in scope, and the ones deliberately untouched
+- Whether the pre-change baseline is green (tests + typecheck + lint) — if unknown, Step 1 snapshot is still required before proceeding
+
+Stop-and-ask triggers:
+
+- A move request without a target file specified
+- A vague "clean this up" without a concrete change type — refuse to proceed until the operator names one of the seven change types
+- A delete request on a symbol `fight-repo-rot` flagged LOW confidence — never auto-proceed, require operator confirmation
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Procedure — 6 steps, run in order
 
 Each step produces an artifact or an assertion. Never skip.
@@ -297,6 +325,10 @@ You cannot verify a change on top of broken tests. If step 1 discovers failing t
 4. Do not proceed into step 2 with a red baseline
 
 A change on top of red is indistinguishable from a change that caused red. You lose the ability to prove causation.
+
+## Things not to do
+
+- **Don't add features the operator did not request.** During a move/rename/split, if you notice a bug in an adjacent function, a test that could be tighter, or a comment that's wrong, report it in the final output as a hand-off — do not fix it as part of this change. Every edited line must trace to the named change type; unrelated fixes contaminate the AST-diff verification and invite silent regressions.
 
 ## Sweep mode — read-only audit
 

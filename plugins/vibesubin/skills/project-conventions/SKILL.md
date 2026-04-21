@@ -13,6 +13,33 @@ This skill pre-pays that tax with one opinionated answer per question. The high-
 
 **The principle**: the best convention is the one the operator doesn't have to invent. When they ask *"should I make a dev branch?"*, answer in one sentence and move on. Don't present a decision framework; make the decision.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Project maturity:  <new scaffold | active repo under audit | legacy repo with historical conventions to respect>
+- Branch strategy:   <GitHub Flow (main only) | main + dev | trunk-based | other — detected from CONTRIBUTING.md / recent branches>
+- Pinning strategy:  <exact-pin + lockfile | caret-range | no lockfile | mixed per-package (monorepo)>
+- Sweep scope:       <whole repo | single subdirectory | single concern (branches OR deps OR layout OR paths)>
+```
+
+Typical items for this skill:
+
+- Project maturity (new project being scaffolded / active project being audited / legacy project with historical conventions to respect)
+- Existing branch strategy (GitHub Flow with main only / long-lived dev branch / trunk-based / other)
+- Existing pinning strategy (exact-pin / caret-range / no lockfile / mixed)
+
+Stop-and-ask triggers:
+
+- Project has both `main` and `dev` branches with distinct purposes — never unilaterally switch, ask which is the integration target
+- Project is a monorepo with per-package pinning conventions — never apply a uniform rule without operator confirmation
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Dependency versioning — pin or bleed
 
 Unpinned dependencies are time bombs. The rule is simple and per-language.
@@ -82,6 +109,7 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 - Don't silently change the existing layout. If the repo already has a specific structure, propose changes and wait for confirmation — this skill is advisory, not autonomous.
 - Don't touch `.env`, `.gitignore`, or any secret-shaped file. Those are `manage-secrets-env`'s responsibility.
 - Don't lecture about `git-flow` vs GitHub Flow vs trunk-based development. Pick GitHub Flow, state the reason in one sentence, move on.
+- **Don't impose conventions the operator didn't ask for.** If they asked about branch strategy, don't unilaterally switch their Dependabot cadence or re-layout their `src/` tree because "while you're here". Adjacent convention drift goes in the output as hand-off suggestions — conventions are opinions, and silent imposition is how this skill loses trust fastest.
 
 ## Sweep mode — read-only audit
 

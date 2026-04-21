@@ -13,6 +13,33 @@ This wrapper owns only the Codex-specific glue: the host check, the templated `/
 
 If you are not on Claude Code with the Codex plugin installed, you do not need this skill. `refactor-verify` accepts pasted review findings from any source directly — this wrapper just automates the invocation step for operators who run the Codex loop often enough that the copy-paste was adding friction.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Host:              <Claude Code + Codex plugin (primary path) | any other (graceful one-line fallback, exit)>
+- Review branch:     <current branch | specified — merge-base with main is the diff scope>
+- Working tree:      <clean (proceed) | dirty (warn operator before handing mixed state to Codex)>
+- Base reference:    <main (default) | explicit base when current branch has no merge-base with main>
+```
+
+Typical items for this skill:
+
+- The branch under review (default: current branch vs its merge-base with main)
+- Working tree state (clean required for a clean review; dirty triggers a warning before invocation)
+- Codex plugin availability (host check in Step 1 — this Assumptions block is Step 0, the host check is Step 1)
+
+Stop-and-ask triggers:
+
+- Working tree is dirty — warn and confirm before handing the mixed state to Codex
+- Current branch has no merge-base with main (detached / new repo / orphan branch) — ask for an explicit base reference instead of assuming main
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Host requirement
 
 This skill only fires on **Claude Code with the Codex plugin installed**. On every other host (Codex CLI itself, Cursor, Copilot, Cline, or Claude Code without the plugin), the skill's first action is a graceful one-line fallback and exit. It never hangs, never errors loudly, never falls back to asking the operator for pasted findings (that is `refactor-verify`'s path directly — this wrapper has nothing to add there).
@@ -100,6 +127,7 @@ The `Task` tool returns the subagent's output as a single result message. Collec
 - **Don't add a sweep-mode section to this SKILL.md.** Its absence is deliberate. Documented here explicitly so a future maintainer does not "fix" it by adding one.
 - **Don't duplicate the review-driven procedure from `refactor-verify`.** If you find yourself writing parsing logic, triage logic, dependency-tree planning, or verification code in this wrapper, stop — that content belongs in `refactor-verify`. Delete it here and extend `refactor-verify` instead.
 - **Don't write `/codex:rescue ...` as plain text in a response.** Slash-command text inside a response body is just a text string — it does not execute the slash command and does not dispatch the plugin. The actual invocation mechanism is the `Task` tool with `subagent_type: "codex:codex-rescue"`. If you find yourself about to paste slash-command text into a response as if it were an instruction, stop — that was the 0.3.2 bug and 0.3.3 fixed it precisely to prevent that regression.
+- **Don't add features the operator did not request.** This wrapper's job is the host check and the Codex invocation — nothing else. If during the host check you notice the repo has other obvious issues (missing CI, uncommitted secrets, stale deps), report them as hand-off suggestions to the relevant skills — do not act on them. A wrapper that silently expands its scope defeats the "thin wrapper" invariant.
 
 ## Harsh mode
 

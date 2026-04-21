@@ -13,6 +13,33 @@ AI reads tables faster than prose. It follows explicit file paths better than va
 
 This skill produces docs in that style. Humans benefit too — the structure is also friendlier for cold skimmers.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Target artifact:   <README | CLAUDE.md | AGENTS.md | commit message | PR body | changelog | architecture doc>
+- Audience:          <AI primary (default) | humans primary (explicit request)>
+- Edit mode:         <new doc | surgical edit (preserve voice + structure) | full rewrite (explicit operator approval required)>
+- Verifiable claims: <list of commands the doc will cite — each must actually run before writing>
+```
+
+Typical items for this skill:
+
+- The target artifact (README / CLAUDE.md / commit / PR body / AGENTS.md)
+- The verification commands the repo actually supports — every capability claim requires one
+- The audience (AI is primary, humans are secondary; reverse only on explicit request)
+
+Stop-and-ask triggers:
+
+- Operator requests marketing copy, superlatives, or unbacked claims — refuse per Objectivity section, explain why
+- A verification command does not exist for a claim the operator asked to include — ask whether to drop the claim or add the verification
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Doc schema — what goes where
 
 Every doc this skill produces is built from a fixed set of sections. The section tree below is the vocabulary. Different doc types use different subsets.
@@ -315,6 +342,7 @@ Full template in `templates/pr.template.md`.
 - **Don't over-emoji.** A single emoji per heading is a structural marker. Ten emojis in a paragraph is noise.
 - **Don't rewrite from scratch.** If a doc already exists, diff against it and preserve every concrete fact (file paths, env vars, numbers, personal names). Use the info-preservation procedure from `refactor-verify`'s references.
 - **Don't format-shame existing docs.** If the operator prefers their existing README structure, keep it. Structure is a suggestion; information preservation is an invariant.
+- **Don't add features the operator did not request — and especially don't silently rewrite an existing doc when they asked for a surgical edit.** The #1 failure mode this skill fights is a rewrite that loses information the operator didn't know was there. When asked to update a section, update that section; note any adjacent issues in the final output as hand-off suggestions.
 
 ## When to call this skill vs just writing text yourself
 

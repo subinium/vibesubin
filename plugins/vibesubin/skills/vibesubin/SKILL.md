@@ -1,6 +1,6 @@
 ---
 name: vibesubin
-description: The vibesubin command and vibe. Runs every skill in the plugin across a repository in parallel and synthesizes their findings into a single prioritized report. Invoke by name (/vibesubin) for a full sweep, or let it route a vague request to the right sub-skill when the operator isn't sure where to start. Read-only by default; fixes apply only after the operator approves items from the report.
+description: The vibesubin command and vibe. Runs every code-hygiene specialist in the plugin across a repository in parallel and synthesizes their findings into a single prioritized report. Process skills like `/ship-cycle` and host-specific wrappers like `/codex-fix` are direct-call only and not part of the sweep. Invoke by name (/vibesubin) for a full sweep, or let it route a vague request to the right sub-skill when the operator isn't sure where to start. Read-only by default; fixes apply only after the operator approves items from the report.
 when_to_use: Trigger on "/vibesubin", "use vibesubin", "run vibesubin on this repo", "full check", "audit my repo", "where do I start", "is my repo okay", "my repo is a mess", "vibe check", or when the operator's request is vague enough that routing to a single specialist isn't obvious.
 context: fork
 agent: general-purpose
@@ -10,7 +10,7 @@ agent: general-purpose
 
 `/vibesubin` is two things at once:
 
-1. **A command** — one word that runs every skill in the pack across the current repo in parallel and returns a single prioritized report. One operator input, one AI output, full repo coverage.
+1. **A command** — one word that runs every code-hygiene specialist in the pack across the current repo in parallel and returns a single prioritized report. One operator input, one AI output, full repo coverage. Process skills like `/ship-cycle` and host-specific wrappers like `/codex-fix` are direct-call only and not part of the sweep.
 2. **A vibe** — a meme-y shorthand for "take a look at my repo with the whole pack and tell me what's up." It's the thing you type when you want the full treatment without having to pick a skill.
 
 Both meanings are intentional. The word doubles as a greeting, a command, and a self-description of what the operator is already doing ("vibing with AI on a codebase").
@@ -100,7 +100,7 @@ Before running, confirm once:
 
 If the operator says yes, proceed. If they want to narrow the scope (one directory, one file, one area), adjust before launching.
 
-### Step 2 — Launch the six specialists in parallel, all in read-only mode
+### Step 2 — Launch the nine specialists in parallel, all in read-only mode
 
 Run all nine sub-skills as **parallel task agents** (or parallel subagents, depending on the host framework). Do not serialize. Parallelism is load-bearing — sequential execution defeats the whole purpose of the command.
 
@@ -178,7 +178,7 @@ Each specialist writes into its own SKILL.md output format, constrained to read-
 
 ### Step 3 — Synthesize into one report
 
-When all six specialists return, merge their findings into a single prioritized report. The synthesis rules:
+When all nine specialists return, merge their findings into a single prioritized report. The synthesis rules:
 
 1. **Criticals first, across all categories.** A security critical beats a refactor medium beats a doc nit.
 2. **Cross-skill evidence wins.** If three specialists independently flag the same file (e.g., `src/api/user.ts` is both a churn×complexity hotspot AND has a SQL injection AND has no tests), that file is top priority.
@@ -286,7 +286,7 @@ Do not push the meme further. Adding more "vibe" language makes the report feel 
 
 ## Mode 2 — Router (when the operator didn't type /vibesubin explicitly)
 
-If the operator's request is vague but they didn't invoke the command, route to a specific specialist instead of launching the full sweep. Running all six is expensive; don't do it unless the operator really wants it.
+If the operator's request is vague but they didn't invoke the command, route to a specific specialist instead of launching the full sweep. Running the full sweep is expensive; don't do it unless the operator really wants it.
 
 ### Routing decision tree
 
@@ -330,6 +330,14 @@ User request
 │      / "이 리뷰 고쳐줘" / pasted review reports with file:line references
 │   → refactor-verify (review-driven fix mode — portable, any review source)
 │
+├── Contains "plan a release" / "cut a release" / "릴리즈 계획"
+│      / "이슈로 남기고 처리" / "make issues for this" / "bundle into issues"
+│      / "turn sweep findings into issues" / "issue-driven" / "이슈 드리븐"
+│      / "roadmap for 0.N.0" / "ship cycle" / "tag and release"
+│      / "release notes 써줘" / "generate changelog from PRs"
+│      / "여러 수정을 묶어서 릴리즈"
+│   → ship-cycle (issue-driven development orchestrator; direct-call only; GitHub + gh CLI required, graceful fallback otherwise)
+│
 ├── Contains "full check" / "run vibesubin" / "vibe check" / "everything"
 │   → MODE 1 (full sweep)
 │
@@ -346,7 +354,7 @@ User request
 
 **User:** *"can you look at this file"* → Too broad. Ask: "What do you want me to look for — is it broken, unsafe, messy, or something else?"
 
-**User:** *"my whole repo is a mess and I don't know where to start"* → This is the command mode signal even without `/vibesubin`. Offer: *"I can run the full vibesubin sweep — all six skills in parallel, one prioritized report at the end. Want me to?"*
+**User:** *"my whole repo is a mess and I don't know where to start"* → This is the command mode signal even without `/vibesubin`. Offer: *"I can run the full vibesubin sweep — all nine skills in parallel, one prioritized report at the end. Want me to?"*
 
 **User:** *"I pushed my .env to github"* → Immediate `audit-security` + `manage-secrets-env` tandem. Don't route through the umbrella; the urgency is specific.
 
@@ -363,9 +371,10 @@ User request
 
 ## Integration notes
 
-- The six specialists' output formats should be stable enough that the synthesis step doesn't have to reverse-engineer them. If a specialist's format changes, update the synthesis template in this SKILL.md.
+- The nine specialists' output formats should be stable enough that the synthesis step doesn't have to reverse-engineer them. If a specialist's format changes, update the synthesis template in this SKILL.md.
 - If a specialist fails (can't run, errors out), report its failure in the "What ran" section and continue with the others. Do not block the whole sweep on one failed specialist.
 - If the repo is too large for a single sweep (e.g., > 10k files), mode 1 should partition and run per-subdirectory, then merge. Warn the operator about the partitioning first.
+- **Post-sweep issue generation.** After a `/vibesubin` sweep, if the operator wants the top findings captured as trackable issues for a release cycle, route them to `/ship-cycle` with the sweep output. `ship-cycle` itself is direct-call only and not part of the parallel sweep, but it is the natural follow-up when a sweep's prioritized fix list needs to become a shipping plan.
 
 ## When this skill is not the right answer
 

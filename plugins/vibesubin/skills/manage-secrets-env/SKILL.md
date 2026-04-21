@@ -13,6 +13,33 @@ This skill owns the high-stakes slice: **secrets, environment variables, and the
 
 **The principle**: the safest default is the one the operator doesn't have to invent. When they ask *"where does my DB password go?"*, answer immediately, explain in one sentence, and offer to scaffold.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Environment tier:  <dev | staging | prod — affects which bucket rules apply>
+- .env.example:      <present | missing (drift check cannot run yet, operator must scaffold first)>
+- Tracked secrets:   <none detected | FOUND — this is an incident; hand off to audit-security immediately, do not proceed with lifecycle workflows>
+- Lifecycle action:  <audit only | add | update | rotate | remove | migrate | provision new env>
+```
+
+Typical items for this skill:
+
+- Current environment tier (dev / staging / prod) — affects which bucket rules apply
+- Whether `.env.example` exists — affects drift-check baseline
+- Whether any secret-shaped value is tracked in git or git history (this is always an incident if true)
+
+Stop-and-ask triggers:
+
+- A tracked secret is detected — **immediate hand-off to audit-security incident mode**, do NOT proceed with normal lifecycle workflows
+- Operator asks to "rotate" without naming which secret — list the candidates and ask
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## The four buckets — where does a value live?
 
 Every value in a project fits into exactly one of these four buckets. Use this decision tree to place anything.
@@ -229,6 +256,7 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 - Don't commit `.env`. Ever. If you see `.env` tracked in git, flag it immediately and hand off to `audit-security` for remediation.
 - Don't store secrets in `.env.example`. That file is committable; real secrets go in `.env`.
 - Don't touch non-secret conventions (branches, directory layout, dep pinning). Those live in `project-conventions`.
+- **Don't add features the operator did not request.** If they asked to rotate one secret, don't also scaffold `.env.example` as a bonus, and don't add startup-validation to an app that didn't request it. Adjacent lifecycle gaps (`.env.example` missing, no startup validation, `.gitignore` incomplete) go in the final output as hand-off suggestions — each one is a decision the operator needs to make explicitly.
 
 ## Sweep mode — read-only audit
 

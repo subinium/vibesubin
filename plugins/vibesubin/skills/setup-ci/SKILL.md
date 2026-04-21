@@ -11,6 +11,33 @@ CI/CD is one of the hardest topics for non-developers because it sits at the int
 
 **Your default assumption:** the operator has never read a workflow file before. Don't patronize them, but don't skip concepts either.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Stack:             <detected from package.json/Cargo.toml/go.mod/requirements.txt — single stack or monorepo>
+- Deploy target:     <none | SSH | Vercel | Fly.io | Cloud Run | Netlify | GitHub Pages>
+- Existing CI:       <none | partial (.github/workflows/*.yml with N workflows) | full>
+- Secrets state:     <to be configured by operator in GitHub UI — this skill never handles credentials>
+```
+
+Typical items for this skill:
+
+- The detected stack (from package.json / requirements.txt / Cargo.toml / go.mod)
+- The deploy target (SSH / Vercel / Fly.io / Cloud Run / Netlify / GitHub Pages / none)
+- Whether Secrets are already configured in the GitHub UI — the skill never creates them, only lists what's needed
+
+Stop-and-ask triggers:
+
+- Multiple stacks coexist (e.g., Next.js frontend + Python backend) without clear monorepo structure — ask which one this workflow is for
+- No deploy target detectable from config — ask explicitly, never guess
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Step 1 — Figure out what the operator actually wants
 
 Before generating any YAML, ask the operator **two questions, one at a time**. Don't ask all at once.
@@ -287,6 +314,7 @@ Manual dispatch is for **a reviewed re-deploy** or first-run proof. Make the gen
 - **Don't copy an outdated template.** CI/CD conventions move fast. Check that the syntax matches the current docs before emitting
 - **Don't auto-deploy to production from the first run.** Require `workflow_dispatch` manually for the first run, then switch to `workflow_run` for subsequent automated runs
 - **Don't leave framework mismatch in place.** A Python workflow in a pnpm repo is not a starting point, it's a bug. Detect the repo and emit the right commands the first time.
+- **Don't scaffold workflows the operator didn't ask for.** If they asked for `test.yml`, do not also drop in `deploy.yml`, `release.yml`, or `codeql.yml` because they "looked useful". Adjacent needs (Dependabot, Renovate, CodeQL) go in the output as hand-off suggestions — a single extra workflow can leak credentials or trigger unwanted billing on the first push.
 
 ## Common failure modes
 

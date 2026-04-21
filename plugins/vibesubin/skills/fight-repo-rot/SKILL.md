@@ -25,6 +25,32 @@ Repos don't break in a day. They rot over months as dead code accumulates, god f
 - before a major new feature (survey the rot first)
 - before open-sourcing (don't surprise strangers)
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Dispatch profile:  <static-strict (TypeScript strict, Rust) — HIGH confidence reachable | dynamic (Python, Ruby, loose JS) — default ceiling is MEDIUM>
+- DI/reflection/codegen: <none detected | present — push all candidates down one tier>
+- Test suite state:  <green (HIGH-confidence tags trustworthy) | red or missing (all tags downgraded one tier)>
+```
+
+Typical items for this skill:
+
+- Language's dynamic-dispatch profile (Python / Ruby / loose JS default to MEDIUM confidence even for apparent HIGH; Rust / TypeScript-strict can reach HIGH with static grep)
+- Whether reflection, DI containers, code generation, or dynamic imports are in play (every one of these pushes confidence down)
+- Whether the test suite runs to green — if no, HIGH-confidence dead-code tags are actually MEDIUM until tests are reliable
+
+Stop-and-ask triggers:
+
+- A symbol is only imported by tests — promote to MEDIUM confidence, never HIGH
+- A DI framework is detected but the reference graph is incomplete — decline HIGH confidence for any symbol the framework could wire at runtime
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## Primary category: dead code
 
 Dead code is the core finding this skill produces. Non-obvious dead code is the highest-leverage cleanup target: it's the thing the operator can delete with calibrated confidence, reducing surface area without touching live behavior. Everything else in this skill is secondary.
@@ -252,6 +278,7 @@ The bias is **high-leverage + low-risk first**. Dead code HIGH is usually the cl
 - **Don't emit dead-code findings without a confidence tag.** Every dead-code line must be tagged HIGH / MEDIUM / LOW.
 - **Don't recommend fixes without evidence.** Every finding must cite the metric or signal that triggered it — a grep count, a commit count, a file size, an LSP reference count.
 - **Don't scope-creep into planning.** "Here's what's wrong" is the deliverable. "Here's the fix plan" belongs in the hand-off skill.
+- **Don't expand the diagnosis scope beyond what was asked.** This skill never edits; the scope-creep risk is in findings. If the operator asked for dead-code diagnosis in `src/api/`, don't hand back an all-repo tree of god-files and hotspots. Adjacent findings go in a short "things I'd look at next" footer — not the main report.
 
 ## Harsh mode — no hedging
 

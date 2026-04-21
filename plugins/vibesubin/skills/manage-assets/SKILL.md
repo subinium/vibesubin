@@ -15,6 +15,33 @@ This skill surfaces that bloat. It is **diagnosis-only** — it never deletes a 
 
 **What this skill is not:** a history-rewriting tool, an LFS migration executor, or a dead-code detector (that's `fight-repo-rot`). It surfaces bloat; it does not remove bloat.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Public clones:     <none known | public repo with active clones/forks (history rewrite requires coordination)>
+- git-lfs:           <installed + initialized | available but uninitialized | not installed>
+- Requested action:  <diagnosis only (default) | destructive hand-off to refactor-verify for history rewrite or LFS migration>
+- Secret-shaped blob: <none | FOUND in history — hand off to audit-security, do not auto-propose removal>
+```
+
+Typical items for this skill:
+
+- Whether the repo has public clones or forks (history rewrites require coordination with all of them)
+- Whether `git lfs` is installed and initialized
+- Whether the operator wants diagnosis-only (default) or is asking for a destructive action (history rewrite / LFS migration) — the skill itself is diagnosis-only and hands off destructive work to refactor-verify
+
+Stop-and-ask triggers:
+
+- History rewrite proposed on a repo with known public clones — require explicit acknowledgment of coordination burden before hand-off
+- A "large file" is actually in active use — don't recommend removal, recommend LFS migration instead
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## When to trigger
 
 - "my repo is huge" / "why is this so big"
@@ -198,6 +225,7 @@ Pure diagnosis. No files deleted, no history rewritten, no LFS migration run. Ap
 - **Don't chase small wins.** A 1 MB file in a 10 GB repo is noise. Prioritize by size, not by count.
 - **Don't confuse large with dead.** A file being big does not mean it's unused. A big asset might be actively referenced by the build. For "is this used" questions, that's `fight-repo-rot`.
 - **Don't assume LFS is always the answer.** LFS costs money on most hosts and has its own operational overhead. Small teams with occasional large files often do fine with "just don't commit it." Recommend LFS only when the pattern is recurring.
+- **Don't expand the diagnosis scope beyond what was asked.** This skill never edits; the scope-creep risk is in findings. If the operator asked about a specific large directory, don't hand back an all-repo blob scan with LFS recommendations for every binary. Adjacent findings go in a short "also worth looking at" footer — not the main bloat report.
 
 ## Sweep mode — read-only audit
 

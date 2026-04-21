@@ -15,6 +15,33 @@ This skill treats the project's **brand identity (BI)** — colors, spacing, typ
 
 **What this skill is not:** a brand designer (it uses the project's existing BI or scaffolds opinionated defaults), a visual regression tester (Chromatic and Percy already do that), a component-library rewriter (it respects the framework the project already uses), or a figma-to-code converter.
 
+## State assumptions — before acting
+
+Before starting the procedure, write an explicit Assumptions block. Don't pick silently between interpretations; surface the choice. If any assumption is wrong or ambiguous, pause and ask — do not proceed on a guess.
+
+Required block:
+
+```
+Assumptions:
+- Framework:         <Tailwind v3 | Tailwind v4 | CSS Modules | styled-components | Emotion | MUI | Chakra | vanilla CSS + custom properties>
+- Tokens file:       <present at <path> | missing (scaffold step required)>
+- Brand defined:     <primary color + display font known | undefined (operator must provide — cannot guess)>
+- Requested action:  <audit only | scaffold tokens file | drift fix (single file) | multi-file consolidation (hand off to refactor-verify)>
+```
+
+Typical items for this skill:
+
+- The framework (Tailwind v3 / Tailwind v4 / CSS Modules / styled-components / Emotion / MUI / Chakra / vanilla CSS with custom properties)
+- Whether a tokens file exists and where it lives — absence triggers the scaffold step
+- Whether the brand is defined (primary color + display font known) — absence blocks scaffolding; the skill asks the operator for the two values it cannot guess
+
+Stop-and-ask triggers:
+
+- Tokens file is missing AND brand is undefined — scaffolding would invent a brand; ask for primary color and display font first
+- Multiple framework idioms coexist (e.g., Tailwind + styled-components in the same project) — never consolidate across frameworks without operator decision on which idiom wins
+
+Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
 ## When to trigger
 
 Direct operator asks:
@@ -264,6 +291,7 @@ If `p-3.5` doesn't exist in the scale, either add it (`3.5: '14px'`) or round to
 - **Don't count `tailwind.config.*`, `*tokens*`, `*theme*`, or `globals.css` as drift sources.** Those files contain the source of truth; they're supposed to have literal values.
 - **Don't silently replace near-match colors.** `#3b82f7` vs `#3B82F6` is close, but only the operator knows whether it was intentional. Ask once.
 - **Don't break contrast or accessibility.** Every color replacement must preserve WCAG AA contrast. If a replacement drops a color to a lower contrast tier, flag it and ask.
+- **Don't add features the operator did not request.** While fixing drift in one component, if you notice an unused Button variant or an accessibility gap in an adjacent component, report it as a hand-off suggestion — do not fix it in the same commit. Cross-component consolidations are a separate scope and a separate operator approval; silent expansion corrupts the tokens-change blast radius.
 
 ## Sweep mode — read-only audit
 

@@ -47,11 +47,17 @@ A wrapper skill:
 
 Wrappers exist because a specific workflow is **frequent enough** to justify a worker slot for one operator's habit — not because every input source deserves its own skill. The engine is the contract; the wrapper is convenience. The first wrapper in the pack is `codex-fix`, delegating to `refactor-verify`'s review-driven fix mode.
 
+## 10. Code hygiene and process are different categories
+
+The pack carries two cognitively distinct categories of worker skill: **code hygiene** — anything that audits, refactors, documents, or secures the code on disk — and **process** — anything that orchestrates the lifecycle of work around the code (issues, milestones, versions, tags, releases, changelog). These do not share a cap. Code hygiene is capped at 10 to protect the operator's cognitive budget — nobody remembers 15 specialists. Process is capped at 1 for now, because one well-scoped orchestrator covers the full issue-to-release loop; a second process worker would fracture the audit trail the first one maintains. If either cap needs to grow, that's a major version decision — extend, split, or displace within the category first.
+
+The umbrella `/vibesubin` command runs code-hygiene specialists only — process skills mutate external state (GitHub issues, tags, releases) and belong in direct-call only workflows like `codex-fix` and `ship-cycle`. Sweep is read-only by invariant #6; process is mutating by definition; these do not mix.
+
 ## What is load-bearing vs. what is flexible
 
 Changing any of the rules above is a major version bump. Changing specific tooling recommendations, thresholds, or language coverage is routine.
 
-- **Load-bearing** (major version bump if changed): the nine rules above, the 6-step refactor-verify procedure, Tidy First separation, the `sweep=read-only` marker protocol, third-person frontmatter descriptions, the one-level-deep reference structure, the issue-only contribution model.
+- **Load-bearing** (major version bump if changed): the ten rules above, the 6-step refactor-verify procedure, Tidy First separation, the `sweep=read-only` marker protocol, third-person frontmatter descriptions, the one-level-deep reference structure, the issue-only contribution model.
 - **Flexible** (routine updates): specific linter names, specific LOC thresholds, specific deploy targets, specific language-smoke-test commands, the set of skills in the pack, per-version phrasing of individual skills.
 
 See [`MAINTENANCE.md`](../MAINTENANCE.md) for the cadence.
