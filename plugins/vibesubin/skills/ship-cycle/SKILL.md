@@ -72,6 +72,18 @@ Never invent assumptions to keep moving. An invented default branch or an invent
 
 Run in order. Each step has a verification or a confirm-gate. Do not skip.
 
+### Step 0.5 — Offer upstream review
+
+If the operator's intake at Step 4 will already include a concrete findings list (pasted sweep report, `codex-fix` output, PR review, scanner output, explicit named scope with evidence), skip this step with a one-liner — *"Findings already provided, skipping upstream review offer."* — and move on.
+
+Otherwise, before running the host check, offer three paths and block until the operator picks one:
+
+- **(a)** Invoke `/vibesubin` for a parallel sweep and wait for its report; consume it as Step 4(a) input.
+- **(b)** Invoke a targeted worker if the operator named a specific concern — `/audit-security` for a security focus, `/fight-repo-rot` for dead code or god files, `/refactor-verify` baseline snapshot for "is the repo green?". Consume the worker's output as Step 4(a) input.
+- **(c)** Proceed with operator-pasted findings as-is — even rough notes are acceptable if the operator owns the scope.
+
+Explicitly: `ship-cycle` does **not** run the review itself. It orchestrates around review output. If the operator picks (a) or (b), surface the exact invocation and wait; do not auto-invoke. If the operator picks (c) without evidence, Step 4's evidence-check will catch gaps and block.
+
 ### Step 1 — Host check
 
 Run the two `gh` checks above. On failure, one-line fallback and stop. On success, capture:
@@ -122,6 +134,31 @@ For each candidate item, fill the template at `references/issue-body-template.md
 Body goes in the language chosen at Step 3. Section headings and checkbox markers stay in English — load-bearing for cross-session tooling.
 
 Do NOT `gh issue create` yet. Drafts stay in the session until Step 7 is confirmed.
+
+**Mandatory acceptance-criteria fields for every issue** (enforced by the issue-body template at `references/issue-body-template.md`):
+
+- A concrete **test plan** scoped to the issue's label. Bug → regression test that reproduces the failure and then passes. Feat → new test or fixture covering the added behavior. Refactor → before/after equivalence (AST-diff or grep-count assertion). Docs/chore → `validate_skills.py` + grep assertions that the doc changed as stated.
+- A concrete **docs plan** naming every file that must update in the same PR: `CHANGELOG.md` section entry, README table row or section edit, `SKILL.md` edit, `CLAUDE.md` change-type matrix entry — whichever apply. Docs updates land in the SAME PR as the code fix, not in a follow-up.
+- A **handoff-notes** block at the bottom listing (a) what the next AI session needs to know to pick up adjacent work, (b) already-done-at references so a future session does not duplicate this work.
+
+If a candidate issue is missing any of these three fields after drafting, block Step 6 (cluster) and report the gap for operator input.
+
+### Step 5.5 — Write PRD.md
+
+Before clustering, aggregate the candidate-issue set into a single `PRD.md` at the repo root (default) or at `/tmp/<repo>-prd-vX.Y.Z.md` if the operator prefers a non-committed draft. The PRD provides the theme-level view that individual issues cannot — *why these N issues matter, what success looks like, what is deferred*.
+
+Follow the template at `references/prd-template.md`. Sections produced:
+
+- **Context** — the trigger (sweep, review, named scope), the state of the repo, the cycle window.
+- **북극성 목표 / North-star goals** — 1–3 sentences naming the outcome the cycle exists to produce.
+- **Themes** — each theme groups related issues under a shared objective (e.g., *"Fix auth regressions"*, *"Harden CI"*).
+- **Success metrics** — observable signals that tell the operator the cycle succeeded (tests green, N issues closed, CHANGELOG entries dated, release tag live).
+- **Issue cluster summary** — flat list of issue titles with labels and milestone target.
+- **Deferred items** — candidate items explicitly pushed to a later cycle, with one-line reasons.
+
+PRD is operator-facing — surface it for approval before Step 6 clustering runs. If the operator requests edits, revise and re-surface; do not proceed to Step 6 until the PRD is approved.
+
+If the cycle is a 1-milestone patch with fewer than 5 issues, the PRD may be inlined in the Step 7 approval prompt instead of a file — operator's choice. Default to file for minor and major cycles; default to inline for patch cycles unless the operator asks otherwise.
 
 ### Step 6 — Classify into milestones
 
@@ -201,6 +238,28 @@ Commit footer: `Closes #<N>`. PR body: `Closes #<N>` as the first line after the
 
 When the worker reports done and the PR merges, GitHub auto-closes the issue. If the worker cannot complete the item (baseline-red, missing context), leave the issue open and tag it `blocked` with a reason in a comment.
 
+#### Step 9a — Parallel dispatch for independent issues
+
+When multiple issues in a milestone have no cross-file overlap — derived from each issue body's *Implementation notes — scope files* list — dispatch them simultaneously as parallel Task-tool subagents. Sequential only when issues share files or one depends on another's output.
+
+- **Default model**: `opus` (per the project's global CLAUDE.md rule *"All custom agents default to opus"*). Override per-agent with `model: sonnet` or `model: haiku` only when the operator explicitly asks for cost/speed.
+- **Default effort**: max, unless the operator has specified otherwise.
+- **Parallel ceiling**: the orchestrator can dispatch **10+ independent issue workers simultaneously** when the dependency graph is flat. Pattern to copy: the `/vibesubin` sweep launches 9 parallel specialists in one block — same shape here for issue execution.
+- **Ownership per worker**: each parallel worker owns its branch, its commit, and its `gh pr create`. No cross-worker coordination until merge-time.
+- If two issues touch the same file, serialize them and note the dependency in the second issue's body under *Depends on*.
+
+#### Step 9b — CI green gate before merge
+
+`gh pr merge` only after the PR's required status checks are green. Command pattern (defense-in-depth — branch protection enforces the same gate at the API level when CI is red):
+
+```bash
+gh pr view <PR> --json statusCheckRollup -q '.statusCheckRollup[].conclusion' \
+  | grep -qv "SUCCESS" && echo "BLOCKED: CI not green" && exit 1
+gh pr merge <PR> --squash --delete-branch
+```
+
+If the repo does not enforce branch protection, the explicit check is the only gate — do not skip it. A merge on top of red CI is a regression vector and contradicts Step 10's preflight.
+
 ### Step 10 — Release when milestone closes
 
 Follow `references/release-pipeline.md`. Short version — 10 commands, in order:
@@ -233,7 +292,11 @@ MILESTONE_ID=$(gh api repos/"$REPO"/milestones --jq '.[] | select(.title=="vX.Y.
 gh api repos/"$REPO"/milestones/$MILESTONE_ID -X PATCH -f state=closed
 ```
 
-Verify `CHANGELOG.md` has the dated heading. Link the release back to the milestone in the release notes' footer. Report done.
+Verify `CHANGELOG.md` has the dated heading. Link the release back to the milestone in the release notes' footer.
+
+When closing an issue (post-merge), copy its handoff-notes block from the issue body into the close comment. A fresh AI session grepping closed issues for context can then find the handoff notes without re-reading the PR diff — the comment becomes the durable reference.
+
+Report done.
 
 ## Sweep mode — ship-cycle is not in the sweep
 

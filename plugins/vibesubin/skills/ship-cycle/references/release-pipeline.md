@@ -26,6 +26,22 @@ test -f scripts/validate_skills.py && python3 scripts/validate_skills.py
 
 If any check fails, stop and report. Do not paper over a red CI run by retagging later — cut a new patch instead.
 
+**Preflight — every merged PR landed on green CI.** Before collecting closed issues for the release, verify that every PR merged into the milestone's target branch closed with green CI. For GitHub:
+
+```bash
+MILESTONE="v0.4.1"
+MERGED_PRS=$(gh pr list --state merged --milestone "$MILESTONE" --json number -q '.[].number')
+for pr in $MERGED_PRS; do
+  conclusion=$(gh pr view "$pr" --json statusCheckRollup -q '[.statusCheckRollup[]|.conclusion]|unique|sort|join(",")')
+  if [[ "$conclusion" != "SUCCESS" ]] && [[ "$conclusion" != "SUCCESS,NEUTRAL" ]]; then
+    echo "BLOCKED: PR #$pr closed with $conclusion — investigate before release"
+    exit 1
+  fi
+done
+```
+
+If branch protection is enabled, this is redundant but fast-fails with actionable context rather than waiting for a release-time surprise.
+
 ## 10-step pipeline
 
 **1. Aggregate closed issues into a CHANGELOG entry.**
@@ -106,6 +122,13 @@ git push
 Wait for CI to complete on this commit before tagging. A tag on top of an untested commit is a regression vector.
 
 **6. Create an annotated tag.**
+
+**Before tagging — verify main is green.**
+
+```bash
+gh run list --branch main --limit 1 --json conclusion -q '.[0].conclusion'
+# must be "success"; if not, abort and investigate before tagging
+```
 
 ```bash
 git tag -a vX.Y.Z -m "<one-line summary of the release>"

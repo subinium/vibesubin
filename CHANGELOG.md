@@ -4,6 +4,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+### Changed
+
+- `ship-cycle/SKILL.md` — new `### Step 0.5 — Offer upstream review` inserted before Step 1. If the operator's intake does not include review findings, the skill offers three paths (invoke `/vibesubin` sweep, invoke a targeted worker, proceed with operator-pasted findings) instead of assuming findings are already present. ship-cycle still does not run the review itself — it orchestrates around review output — but it no longer silently fails when the operator expects it to drive the upstream step.
+- `ship-cycle/SKILL.md` — new `### Step 5.5 — Write PRD.md` inserted between Step 5 and Step 6. Produces a single PRD file (or inline block for < 3-issue cycles) that themes the candidate issues, names north-star goals, success metrics, and deferred items. Follows the new template at `references/prd-template.md`. Operator approves the PRD before clustering runs, preventing milestone assignment on a set the operator has not confirmed.
+- `ship-cycle/SKILL.md` — new `#### Step 9a — Parallel dispatch for independent issues` sub-step under Step 9. When the dependency graph across candidate issues is flat (no shared files, no cross-issue output dependency), dispatch as parallel Task-tool subagents — ceiling of 10+ independent issue workers simultaneously. Documents the model default (`opus`, per project global CLAUDE.md) and the effort default (max). Mirrors the `/vibesubin` parallel sweep launch pattern. Sequential execution only when issues share files or depend on each other.
+- `ship-cycle/SKILL.md` — new `#### Step 9b — CI green gate before merge` sub-step under Step 9. Explicit `gh pr view ... statusCheckRollup` check before `gh pr merge`, with the shell snippet to defense-in-depth on top of branch protection. PRs in a milestone no longer merge with red CI by accident.
+- `ship-cycle/SKILL.md` — Step 5 (draft candidate issues) now specifies three mandatory acceptance-criteria fields per issue: test plan (scoped by label), docs plan (every doc that updates in the same PR), handoff notes (what the next AI session needs + already-done-at links). If any field is missing after drafting, Step 6 (cluster) is blocked until the operator fills it.
+- `ship-cycle/SKILL.md` — Step 11 (audit trail) now requires the handoff-notes block to be copied from the issue body into the close comment at merge time, so a fresh AI session grepping closed issues can reconstruct context without re-reading the PR diff.
+- `ship-cycle/references/issue-body-template.md` — three new mandatory sections in the template, with matching bilingual (English + Korean) worked examples: `## Test plan (required — scoped by label)` with a label-to-required-test table covering bug / feat / perf / refactor / docs / chore / security / ci; `## Docs plan (required — lands in same PR as the code fix)` with a file-to-change-type table enforcing atomic docs updates; `## Handoff notes (required — for the next AI session)` with "what next session needs to know" and "already-done-at" subsections.
+- `ship-cycle/references/release-pipeline.md` — two new CI-green verification blocks. Preflight: every merged PR in the milestone closed with SUCCESS status on required checks. Pre-tag: `main`'s latest run is green before `git tag -a`. Both use `gh` + `statusCheckRollup` as the authoritative source; branch protection makes them redundant-but-defensive.
+
+### Added
+
+- `ship-cycle/references/prd-template.md` — new 84-line template for the PRD file that Step 5.5 produces. Sections: Context, 북극성 목표 (north-star goals), Themes (per-theme Objective + Issues + Success criterion + Priority), Milestone cluster plan, Success metrics, Out of scope, Already-done-at. Section headings stay in English for `gh`/grep stability; body prose follows the operator's chosen language.
+
 ## [0.4.0] — 2026-04-21
 
 ### Added
