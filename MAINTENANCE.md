@@ -64,11 +64,15 @@ The pack aims to be language-agnostic. Adding a new language means:
    - Canonical build / typecheck / test command chain
    - Standard linter
    - Common refactoring pitfalls for that language
-2. Add corresponding patterns to `audit-security/references/language-scanners.md`.
-3. Add LOC / complexity tooling to `fight-repo-rot/references/rot-metrics.md`.
-4. Update any smoke-test script in `scripts/` to auto-detect the new language.
+   - Security scanner considerations for the language (scanners and patterns are folded into this file — there is no separate `language-scanners.md`).
+2. If the language needs bespoke LOC / complexity tooling beyond `lizard` / `scc` / `cloc`, document it inline in the relevant section of `plugins/vibesubin/skills/fight-repo-rot/SKILL.md`. Rot metrics are captured per-scan (churn × complexity, LOC, god-file thresholds) — there is no sidecar metrics file.
+3. Update any smoke-test script in `scripts/` to auto-detect the new language.
 
 Do **not** add a new top-level skill per language. Everything stays language-agnostic.
+
+### When adding a new skill
+
+See [`docs/ADDING-A-SKILL.md`](./docs/ADDING-A-SKILL.md) for the canonical walkthrough — file layout, required `SKILL.md` sections (including harsh-mode and sweep-mode), umbrella wiring, README touch-ups, validator expectations, and CHANGELOG entry. Do not describe the procedure inline here; keep this file focused on cadence.
 
 ---
 
@@ -88,11 +92,12 @@ Some decisions are load-bearing for the pack's identity. Changing them is a majo
 
 If you are an AI agent picking up maintenance of this pack in a new session, read these files in order:
 
-1. `README.md` — overview and skill list
-2. `docs/PHILOSOPHY.md` — invariants
-3. This file (`MAINTENANCE.md`) — what to update and when
-4. The specific skill's `SKILL.md` and `references/`
-5. Recent issues on the repo (via `gh issue list`)
+1. `CLAUDE.md` — operational rules for this repo (read first; enforces session-level constraints that affect everything below)
+2. `README.md` — overview and skill list
+3. `docs/PHILOSOPHY.md` — invariants
+4. This file (`MAINTENANCE.md`) — what to update and when
+5. The specific skill's `SKILL.md` and `references/`
+6. Recent issues on the repo (via `gh issue list`)
 
 Do not propose structural rewrites on first session. Confirm with the maintainer before touching schemas, install mechanics, or the philosophy.
 

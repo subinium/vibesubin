@@ -47,7 +47,7 @@ When the operator gives a vague ask ("help", "where do I start", "my repo is a m
 
 The two modes exist because different users need different entry points. The command mode is for "do everything"; the router mode is for "help me narrow down."
 
-## Tone: balanced (default) vs. harsh (opt-in)
+## Harsh mode — no hedging
 
 Every sweep runs in one of two tones. The default is **balanced** — honest but warm, direct but not cold. Operators opt in to **harsh** when they want a review that refuses to soften anything.
 

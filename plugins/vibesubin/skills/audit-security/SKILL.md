@@ -326,6 +326,22 @@ Things to watch for in your own output:
 - **Fabricated severity** — inventing "CVSS 9.8" scores you didn't actually compute. Use plain labels (critical/high/medium) and explain the reasoning.
 - **Missing the obvious** — running grep for `eval(` and missing a `.env` file sitting in `git ls-files`. Always check tracked secrets first; it's the highest signal-per-second category.
 
+## Sweep mode — read-only audit
+
+This skill is **already diagnosis-only** by default — it never edits regardless of how it's invoked. When the umbrella runs it with `sweep=read-only`, the same sweep still runs, but the **output shape is trimmed**: only CRITICAL and HIGH findings are surfaced, the per-finding triage dialog is deferred to the umbrella's synthesis step, and the report leads with an aggregate stoplight + finding counts instead of a narrative section-by-section walkthrough.
+
+Sweep-mode report includes:
+- Stats line (scope, runtime context, total findings) and an aggregate stoplight (<N critical> / <N high>)
+- CRITICAL findings with file:line + one-sentence blast-radius
+- HIGH findings with file:line + one-sentence blast-radius
+- Hand-off pointers (e.g., tracked `.env` → `manage-secrets-env`; CI secret issues → `setup-ci`)
+
+Sweep-mode report **omits** (vs the full direct-call report): MEDIUM findings, the false-positive list, the needs-review questions, the full incident runbook prose, and the proposed code-change snippets per finding.
+
+No behavior change from default pure-diagnosis — the sweep still classifies every hit, still respects scope, still never edits. Only the output shape changes so the umbrella can synthesize across workers without reading a thousand-line report.
+
+Marker-less invocation (direct call `/audit-security`) keeps the full report — MEDIUM, false-positive triage, needs-review questions, and per-finding fix snippets all included.
+
 ## Harsh mode — no hedging
 
 When the task context contains the `tone=harsh` marker (usually set by the `/vibesubin harsh` umbrella invocation, but can also come from direct requests like *"don't sugarcoat"* / *"brutal review"* / *"매운 맛"*), switch output rules:

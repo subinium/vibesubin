@@ -1,6 +1,6 @@
 ---
 name: fight-repo-rot
-description: Finds what's rotting in a repo and returns a prioritized diagnosis — dead code first, then god files / hotspots / hardcoded paths / stale TODOs / lopsided import graphs. Dead-code candidates are tagged HIGH / MEDIUM / LOW confidence so the operator can delete with calibrated risk. Pure diagnosis — never edits code, never plans fixes, never runs verification. Hand off to refactor-verify for deletions and restructures, to manage-config-env for config issues, to audit-security for CVE dependency rot. Language-agnostic.
+description: Finds what's rotting in a repo and returns a prioritized diagnosis — dead code first, then god files / hotspots / hardcoded paths / stale TODOs / lopsided import graphs. Dead-code candidates are tagged HIGH / MEDIUM / LOW confidence so the operator can delete with calibrated risk. Pure diagnosis — never edits code, never plans fixes, never runs verification. Hand off to refactor-verify for deletions and restructures, to project-conventions for config issues, to audit-security for CVE dependency rot. Language-agnostic.
 when_to_use: Trigger on "find dead code", "what can I delete", "is any of this unused", "clean up this repo", "what's rotting", "what should I clean up", "where should I refactor next", "too messy", "too many files", "is my repo okay" (health check), before a major new feature (survey first), or before open-sourcing.
 allowed-tools: Grep Glob Read Bash(git log *) Bash(git blame *) Bash(git ls-files *) Bash(git grep *) Bash(wc *) Bash(find *)
 ---
@@ -11,7 +11,7 @@ Repos don't break in a day. They rot over months as dead code accumulates, god f
 
 **What this skill is:** a diagnosis, sorted by confidence and leverage, with a pointer to the skill that should handle each finding.
 
-**What this skill is not:** an executor. It never deletes, refactors, rewrites, or runs tests. When the operator approves a finding, it hands off to another skill (`refactor-verify` for deletions and restructures, `manage-config-env` for config fixes, `audit-security` for CVE dependency rot). This boundary is load-bearing — the moment this skill starts editing, the evidence chain breaks.
+**What this skill is not:** an executor. It never deletes, refactors, rewrites, or runs tests. When the operator approves a finding, it hands off to another skill (`refactor-verify` for deletions and restructures, `project-conventions` for config fixes, `audit-security` for CVE dependency rot). This boundary is load-bearing — the moment this skill starts editing, the evidence chain breaks.
 
 ## When to trigger
 

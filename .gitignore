@@ -28,3 +28,13 @@ scratch/
 .omx/
 .claude/
 .cursor/
+
+# secrets — keep ignored
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*credentials*
+secrets/
+*.pfx
+*.p12

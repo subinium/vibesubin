@@ -158,7 +158,7 @@ Every dead-code candidate comes back with a confidence tag:
 - **MEDIUM** — referenced only from tests, or the language uses dynamic dispatch (Python, Ruby, loose JS). Operator confirms before deletion.
 - **LOW** — exported symbol, generated code, reflection / DI / annotations involved. Human review required; never auto-hand-off.
 
-This skill is deliberately hands-off: it never edits, never deletes, never runs verification. It surfaces problems with evidence next to each one, and hands off to `refactor-verify` for deletions and splits, to `manage-config-env` for hardcoded-path fixes, and to `audit-security` for CVE dependency rot. Nothing gets touched until you approve the list.
+This skill is deliberately hands-off: it never edits, never deletes, never runs verification. It surfaces problems with evidence next to each one, and hands off to `refactor-verify` for deletions and splits, to `project-conventions` for hardcoded-path fixes, and to `audit-security` for CVE dependency rot. Nothing gets touched until you approve the list.
 
 ### 4. `write-for-ai`
 

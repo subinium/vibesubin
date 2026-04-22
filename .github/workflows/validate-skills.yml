@@ -37,3 +37,9 @@ jobs:
 
       - name: Run validator
         run: python scripts/validate_skills.py --verbose
+
+      - name: Install pytest
+        run: pip install pytest==8.3.3
+
+      - name: Run validator tests
+        run: pytest tests/ -q

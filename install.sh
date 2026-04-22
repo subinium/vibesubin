@@ -59,7 +59,7 @@ install_to() {
     local dst="$1"
     local label="$2"
 
-    mkdir -p "${dst}"
+    [ ${DRY_RUN} -eq 0 ] && mkdir -p "${dst}"
 
     local installed=0 skipped=0 replaced=0
     echo ""
@@ -88,7 +88,13 @@ install_to() {
             fi
         elif [ -e "${target}" ]; then
             if [ ${FORCE} -eq 1 ]; then
-                [ ${DRY_RUN} -eq 0 ] && rm -rf "${target}"
+                if [ ${DRY_RUN} -eq 0 ]; then
+                    if [ -L "${target}" ]; then
+                        rm "${target}"
+                    else
+                        rm -rf -- "${target}"
+                    fi
+                fi
                 echo "  replace  ${name} (was a real directory)"
                 replaced=$((replaced + 1))
             else

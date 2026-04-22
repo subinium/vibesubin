@@ -67,6 +67,8 @@ Steps 1–10 above are the manual policy. The `ship-cycle` skill (`plugins/vibes
 | Cut a release via ship-cycle | `/ship-cycle` drives the whole flow → closed issues → `CHANGELOG.md` aggregation → both manifests → `git tag -a` → `gh release create` | `gh release view vX.Y.Z` + `python3 scripts/validate_skills.py` |
 | Fix a broken internal link (docs) | The file with the link → `scripts/validate_skills.py` if it's a new category of check | `python3 scripts/validate_skills.py` |
 
+**Canonical skill-authoring mechanics**: see [`docs/ADDING-A-SKILL.md`](./docs/ADDING-A-SKILL.md) for frontmatter schema, required sections, validator contract, output shape, and the per-change-type file checklist.
+
 ## 🔒 Load-bearing invariants
 
 If any of these regress, something higher-level breaks.
