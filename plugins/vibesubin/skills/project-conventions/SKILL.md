@@ -141,6 +141,32 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, exaggerate severities, or become rude. Every harsh statement must still cite the same file, line, or lockfile absence the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"브랜치 이름·의존성 버전·폴더 구조 같은 '구조적인 기본값'이 들쭉날쭉하면 새 AI 세션이 매번 '어디 뭐가 있지?'부터 시작합니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"작은 결정 10개를 매번 다시 고민하는 비용이 누적되면, 프로젝트는 '진짜 일'을 할 시간이 줄어요. 그리고 규칙이 없으면 AI가 매번 다른 답을 줍니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"브랜치는 GitHub Flow(main + 짧은 feature), 의존성은 정확 핀고정 + 락파일 커밋, 폴더는 도메인 우선, 절대경로는 소스에 두지 않기 — 95% 프로젝트에 맞는 기본값을 감사하고, 규칙에서 벗어난 것만 고칩니다."*
+
+### Severity translation
+
+- 🔴 major → *"브랜치가 엉켜 있거나 의존성이 완전히 풀려 있음 — 다음 배포 전 정리 필수"*
+- 🟡 minor → *"대부분 규칙에 맞는데 한두 가지 빗나감"*
+- 🟢 clean → *"기본값 전부 부합 — 새 세션이 바로 따라갈 수 있음"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - `.env`, secrets, `.gitignore` entries for secret-shaped files, anything where a mistake leaks a credential → `manage-secrets-env`. That skill owns the high-stakes slice.

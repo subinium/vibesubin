@@ -318,6 +318,32 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent drift, exaggerate counts, or become rude. Every harsh statement must cite the same file, line, or grep output the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"한 사이트 안에서 primary blue가 3가지, button이 2개 구현, padding이 5가지 다른 숫자로 박혀 있으면 사용자에게는 '급조한 느낌'이 먼저 닿습니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"디자인 drift는 처음엔 안 보여요. 10개 화면 늘어나면 통일하는 비용이 10배가 되고, 결국 그냥 안 통일하게 됩니다. 지금이 제일 싼 시점."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"tokens 파일을 찾거나 만들고(색·간격·타이포·그림자), 하드코딩된 hex·arbitrary Tailwind 값·중복 컴포넌트(Button/Card/Nav)를 찾아 tokens로 되돌립니다. 프레임워크(Tailwind v3/v4 / styled-components / MUI 등)는 프로젝트의 것을 따릅니다."*
+
+### Severity translation
+
+- 🔴 no-source → *"tokens 파일 자체가 없음 — 아무 기준이 없는 상태"*
+- 🟡 drift-heavy → *"tokens는 있는데 절반 이상이 무시됨"*
+- 🟢 unified → *"대부분 tokens 참조 — 소수 call site만 정리"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - **Multi-file token rename or component consolidation** → `refactor-verify` with the rename/merge plan, call-site closure verified against the old and new names

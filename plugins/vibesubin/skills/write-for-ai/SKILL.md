@@ -388,6 +388,33 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent missing docs, exaggerate staleness, or become rude. Every harsh statement must cite the same file, line, or git-log evidence the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"AI는 매 세션 맨땅에서 당신의 레포를 다시 읽어요. README·CLAUDE.md·커밋 메시지가 비어 있거나 스타일이 프로즈에 가까우면, 다음 세션의 AI가 파일 구조·규칙·'이건 건드리지 마'를 알 방법이 없습니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"문서가 정적이면 다음 AI 세션이 '이게 뭐하는 프로젝트지?'부터 시작합니다. 결과: 이미 있는 기능을 다시 만들거나, 이미 정한 규칙을 어기고 리팩터를 진행합니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"README·CLAUDE.md·커밋·PR 본문을 AI가 읽기 좋은 구조(테이블 > 산문, 명시적 파일 경로, '하지 마' 규칙 선언)로 씁니다. 쓰기 전에 레포를 먼저 읽고, 쓴 내용 중 사실이 아닌 문장이 없는지 검증합니다."*
+
+### Severity translation
+
+- 🔴 missing → *"문서 자체가 없음 — 다음 세션 AI가 맨땅에서 추측 시작"*
+- 🟡 stale → *"있는데 현실과 달라요 — AI가 거짓 정보 기반으로 작업"*
+- 👻 ghost → *"과거에 있었는데 조용히 사라짐 — env 변수나 스크립트 섹션이 증발"*
+- 🟢 healthy → *"충분함 — 새 세션이 바로 일 시작 가능"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - If rewriting a doc risks losing concrete facts → borrow the info-preservation check from `refactor-verify` (grep old doc's concrete terms, verify they appear in the new doc, or are deliberately dropped)

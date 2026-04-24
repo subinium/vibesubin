@@ -294,6 +294,32 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, exaggerate confidence, or become rude. Every harsh statement must still cite the same metric or signal the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"안 쓰는 코드가 계속 쌓이면 AI가 다음 세션에서 '이 함수는 뭐지?' 하면서 잘못 고치고, 당신도 파일을 열 때마다 필요한 것·필요 없는 것을 구분해야 합니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"죽은 코드 자체는 안 터지지만, 그 주변을 고치는 비용을 계속 만들어요. 거대 파일·핫스팟도 같은 이유로 버그가 많이 나옵니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"모든 함수·파일·외부 라이브러리를 확인해서 아무도 안 부르는 것을 HIGH/MEDIUM/LOW 확신 등급으로 태그합니다. 지우는 건 refactor-verify 스킬이 담당 — 이 스킬은 찾기만 하고 손대지 않습니다."*
+
+### Severity translation
+
+- HIGH 확신 → *"지워도 안전 (refactor-verify에 넘겨서 지우면 됨)"*
+- MEDIUM 확신 → *"한 번 더 확인 필요 — 테스트에서만 쓰이거나 동적 호출 가능성"*
+- LOW 확신 → *"사람이 직접 확인 — 자동 삭제 금지"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase (*"지금 당장"* / *"이번 주 안에"* / *"다음 릴리즈 전까지"* / *"시간 날 때"*) and the finding number. Footer names the hand-off skill (e.g., *"어떤 스킬이 고치나요? — refactor-verify"*).
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, confidence tags, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added. Layperson mode is presentation-only.
+
 ## Hand-offs
 
 - **Dead code (HIGH)** → `refactor-verify` with the list, each item becoming a delete-dead node

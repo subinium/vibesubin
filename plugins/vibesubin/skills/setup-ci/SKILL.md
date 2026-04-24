@@ -355,6 +355,32 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, exaggerate CVE severity, or become rude. Every harsh statement must cite the same workflow file, job name, or secret reference the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"CI가 없으면 매 배포가 수동입니다. 테스트를 까먹고 배포, lint 안 돌리고 배포, 시크릿 까먹고 배포 — 한 번의 실수가 프로덕션을 내립니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"CI는 비개발자 pack에서 가장 큰 생산성 레버예요. 한 번 세팅하면 `git push`가 모든 걸 다 해요. 안 세팅하면 매주 같은 실수가 반복됩니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"package.json·requirements.txt·Cargo.toml 같은 걸로 스택을 감지하고, 테스트·lint·배포 workflow를 `.github/workflows/`에 올리고, 배포 후 health check까지 포함한 yaml을 scaffold합니다. 시크릿 값은 만지지 않고 — 어떤 이름·어디에 넣어야 하는지만 알려줍니다."*
+
+### Severity translation
+
+- 🔴 none → *"CI 자체가 없음 — 지금 모든 배포가 수동 눈대중"*
+- 🟡 partial → *"테스트는 돌아가는데 배포가 수동 / 배포는 되는데 health check 없음"*
+- 🟢 healthy → *"테스트 + 배포 + health check까지 자동"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - Deploy touches `.env` or secrets → `manage-secrets-env` for the `.env` pattern and lifecycle

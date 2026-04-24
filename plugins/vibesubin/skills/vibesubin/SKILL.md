@@ -1,6 +1,6 @@
 ---
 name: vibesubin
-description: The vibesubin command and vibe. Runs every code-hygiene specialist in the plugin across a repository in parallel and synthesizes their findings into a single prioritized report. Process skills like `/ship-cycle` and host-specific wrappers like `/codex-fix` are direct-call only and not part of the sweep. Invoke by name (/vibesubin) for a full sweep, or let it route a vague request to the right sub-skill when the operator isn't sure where to start. Read-only by default; fixes apply only after the operator approves items from the report.
+description: The vibesubin command and vibe. Runs every code-hygiene specialist in the plugin across a repository in parallel and synthesizes their findings into a single prioritized report. Process skills like `/ship-cycle` and host-specific wrappers like `/codex-fix` are direct-call only and not part of the sweep. Invoke by name (/vibesubin) for a full sweep, or let it route a vague request to the right sub-skill when the operator isn't sure where to start. Read-only by default; fixes apply only after the operator approves items from the report. Two optional output modifiers — `tone=harsh` for direct, no-hedging framing, and `explain=layperson` for plain-language translation (3-dimension box format with "왜 해야 / 왜 중요 / 무엇을 할지" per finding); the two combine. When two specialists give contradictory advice on the same file, the umbrella emits a skill-conflict block (gap / reason / basis per side) instead of silently picking one.
 when_to_use: Trigger on "/vibesubin", "use vibesubin", "run vibesubin on this repo", "full check", "audit my repo", "where do I start", "is my repo okay", "my repo is a mess", "vibe check", or when the operator's request is vague enough that routing to a single specialist isn't obvious.
 context: fork
 agent: general-purpose
@@ -90,6 +90,58 @@ Harsh mode is **not** about being rude, exaggerating, or inventing findings. It 
 
 ---
 
+## Layperson mode — plain-language translation
+
+Balanced and harsh modes both assume the operator reads technical findings fluently. Layperson mode (`explain=layperson`) adds a plain-language layer for non-developer vibe-coders — a 3-dimension box format per finding, jargon glossary, severity-to-urgency translation. Opt-in only; never defaults on. Combines freely with `tone=harsh`. Full rules at `references/layperson-translation.md`.
+
+### When to switch to layperson mode
+
+Any of these signals activates it:
+
+- `/vibesubin explain`, `/vibesubin easy`, `/vibesubin layperson`
+- *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"비개발자 모드로"*
+- *"explain like I'm non-technical"*, *"initiate easy mode"*, *"no jargon"*
+- *"非開発者でも分かるように"*, *"やさしい言葉で"*
+- *"用通俗的话解释"*, *"给外行看的版本"*
+
+### What changes in layperson mode
+
+1. **Marker propagation.** Every specialist task description is prefixed with `explain=layperson` alongside `sweep=read-only`. Specialists check for it and add a 3-dimension block to each finding. Stacks with `tone=harsh`.
+2. **3-dimension block per finding.** Every finding gets three questions answered in plain language:
+   - **왜 이것을 해야 하나요? / Why should you do this?** — human-impact framing (who gets hurt, when, how).
+   - **왜 중요한 작업인가요? / Why is this an important task?** — severity translation + concrete consequence timeline.
+   - **그래서 무엇을 하나요? / So what will be done?** — concrete action in plain language; any unavoidable term defined in parens.
+3. **Severity translation.** CRITICAL → "지금 당장 (ship하기 전에 필수)"; HIGH → "이번 주 안에"; MEDIUM → "다음 릴리즈 전까지"; LOW → "시간 날 때 정리". Plain-language phrase replaces the raw label in finding headers.
+4. **Pretty box format** around each finding (box-drawing characters framing the 3 dimensions + file + which skill will fix it). Makes findings scannable for operators who skip technical detail.
+5. **Jargon glossary** inline. "SQL injection", "dependency", "lint", "hotspot", "CI", "rebase", "force push", "semver", "lockfile" get a one-line definition on first use in the report.
+
+### What does NOT change in layperson mode
+
+- Findings themselves — same files, same line numbers, same counts, same evidence.
+- Read-only behavior.
+- Accuracy — plain language is never imprecise. "SQL injection" becomes "공격자가 비밀번호 없이도 사용자 데이터를 읽을 수 있는 버그" — not "a little security thing".
+- Severity — never softened beyond the underlying finding.
+
+### When *not* to use layperson mode
+
+- Operator is a developer and asked for the technical report.
+- Repo is already clean. Wrapping "nothing to fix" in plain-language framing reads condescending; emit a one-line clean result instead.
+- Operator explicitly asked for jargon ("show me the CVEs", "give me the raw findings"). Respect the override.
+
+---
+
+## Skill conflicts — gap, reason, basis
+
+Sometimes two specialists give contradictory advice on the same file — refactor-verify says "pause until 4-check passes" while unify-design says "consolidate now"; fight-repo-rot says "remove this dep" while project-conventions says "don't prune manually". Today the umbrella would silently pick one or bury the disagreement; now it surfaces the conflict explicitly.
+
+When a catalog conflict pair matches two specialists' recommendations on the same path, the umbrella emits a `⚠ Skill conflict` block directly under the affected file in the synthesized report. The block shows both specialists' recommendation, reason, and evidence basis in full — the operator is the tie-breaker, not the umbrella.
+
+Full catalog (four seeded pairs: refactor-verify↔audit-security sequencing, unify-design↔refactor-verify consolidation hand-off, fight-repo-rot↔project-conventions dead deps, manage-secrets-env↔audit-security tracked `.env`), decision rule (hand-off vs. true conflict), and output shape at `references/skill-conflicts.md`.
+
+Layperson mode adds one extra line per conflict block: *"쉽게 말해서 / In plain words: 두 스킬이 다른 걸 하라고 해요. A는 <짧은 이유>, B는 <짧은 이유>. 당신이 골라야 합니다."*
+
+---
+
 ## Mode 1 — Full sweep procedure
 
 ### Step 1 — Confirm scope in one sentence
@@ -176,6 +228,8 @@ Each specialist writes into its own SKILL.md output format, constrained to read-
 
 **If harsh mode is active**, prepend `tone=harsh` to every specialist task description above, before `sweep=read-only`. Example for `fight-repo-rot`: *"tone=harsh, sweep=read-only — produce diagnosis only, never edit. Apply harsh-mode output rules..."*. Every specialist checks for this marker and switches its output tone accordingly.
 
+**If layperson mode is active**, additionally prepend `explain=layperson` to every specialist task description. Example combined: *"tone=harsh, explain=layperson, sweep=read-only — produce diagnosis only, never edit. Apply harsh-mode framing AND the 3-dimension plain-language block per finding; box-format each finding per `references/layperson-translation.md`."*. Markers stack; order is `tone`, `explain`, `sweep`.
+
 ### Step 3 — Synthesize into one report
 
 When all nine specialists return, merge their findings into a single prioritized report. The synthesis rules:
@@ -185,6 +239,8 @@ When all nine specialists return, merge their findings into a single prioritized
 3. **Group by file, not by specialist.** The operator fixes files, not categories.
 4. **Show the chain of causation.** If the security finding is downstream of the repo rot (complex file → missed validation), say so.
 5. **One recommendation per file.** "Fix this by: <concrete next step, one sentence>." Link to the specialist that should handle the fix.
+6. **Check for skill conflicts.** Before emitting the per-file recommendation, consult `references/skill-conflicts.md`. If two specialists' advice on the same path matches a catalog entry OR if one specialist's recommendation negates another's, emit a `⚠ Skill conflict` block in the shape specified there — gap, reason, basis per side, with an operator-decides recommendation. Do not resolve silently.
+7. **Apply layperson layer if marker active.** When `explain=layperson` is on, wrap each finding in the box format from `references/layperson-translation.md` and add the 3-dimension block (왜 해야 / 왜 중요 / 무엇을 할지) with severity-to-urgency translation. Findings, counts, and evidence stay identical.
 
 ### Step 4 — Report format
 
@@ -222,6 +278,29 @@ Size bucket: **S** = quick win (single file, under an hour), **M** = multi-file 
 | 2 | src/api/user.ts (whole file) | Hotspot: 870 LOC, 18 CCN, 47 commits / 6mo | HIGH | refactor-verify | L |
 | 3 | .env committed in git history | Secret exposure | CRITICAL | audit-security → manage-secrets-env | M |
 | ... |
+
+## Skill conflicts (if any fired)
+
+⚠ Skill conflict — src/api/user.ts : (whole file)
+
+Two specialists disagree on what to do here.
+
+├─ Specialist A — refactor-verify
+│  Recommends: refactor first, then re-run audit-security on the result
+│  Reason: structural-first — auditing the old shape wastes effort
+│  Basis: refactor-verify SKILL.md §"Security-sensitive changes"
+│
+├─ Specialist B — audit-security
+│  Recommends: audit first, then refactor the fix with verification
+│  Reason: exploitability-first — a refactor that preserves a vuln is not safer
+│  Basis: incident runbook — containment before structural work
+│
+└─ Recommendation: sequence depends on liveness of the vulnerability
+   Operator decides:
+     • ACTIVE vuln → audit-security first, then refactor
+     • LATENT vuln → refactor-verify first, then re-audit
+
+(Full catalog + decision rule: `references/skill-conflicts.md`. Omit this section when no conflicts fired.)
 
 ## By specialist
 
@@ -340,6 +419,11 @@ User request
 │
 ├── Contains "full check" / "run vibesubin" / "vibe check" / "everything"
 │   → MODE 1 (full sweep)
+│
+├── Contains "쉽게 설명해줘" / "일반인도 이해되게" / "explain like I'm non-technical"
+│      / "initiate easy mode" / "no jargon" / "/vibesubin explain" / "/vibesubin easy"
+│      / "非開発者でも分かるように" / "用通俗的话解释"
+│   → MODE 1 (full sweep) with `explain=layperson` marker (stackable with `tone=harsh`)
 │
 └── None of the above — ambiguous
     → Ask one question: "What's bothering you most right now — the code is

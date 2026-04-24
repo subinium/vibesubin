@@ -359,6 +359,22 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent failures, skip verification steps, or become rude. Every harsh statement must cite the same symbol count, grep output, or test result the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding (in the operator's language — Korean / English / Japanese / Chinese)
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"지금 파일을 옮기거나 함수 이름을 바꾸면 다른 곳에서 그 코드를 부르는 부분이 조용히 망가질 수 있어요. 이 스킬이 그걸 미리 잡아줍니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"AI가 리팩터 끝내고 '완료'라고 해도, 사실은 호출부 한두 개가 옛날 이름을 계속 가리키고 있을 수 있어요. 배포 후 실제 사용자 흐름에서 터집니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"바꾸기 전 상태를 저장하고, 변경을 의존성 순서대로 적용한 뒤, 심볼·컴파일·동작·호출부 4단계 검증이 전부 통과할 때만 '완료'라고 말합니다."*
+
+### Severity translation
+
+- 🔴 blocker → *"리팩터가 망가진 상태 — 지금 고치지 않으면 배포 즉시 터집니다"*
+- 🟡 caution → *"다음 커밋 전에 확인 필요"*
+- 🟢 pass → *"4단계 검증 통과 — 안전하게 머지 가능"*
+
 ## Review-driven fix mode
 
 A variant of the standard procedure where the trigger is an **external review report** — findings from a second-model pass (via the `codex-fix` wrapper or a hand-pasted `/codex:rescue` output), a human PR review, a security scanner (`gitleaks`, `pip-audit`, `cargo audit`, `govulncheck`), a SAST tool (Semgrep, Bandit), a runtime alert (Sentry), or the operator's own hand-written notes — and the task is to **resolve every item** in the report against the repo's current state.

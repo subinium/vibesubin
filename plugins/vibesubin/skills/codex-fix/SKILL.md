@@ -133,6 +133,33 @@ The `Task` tool returns the subagent's output as a single result message. Collec
 
 Inherited from `refactor-verify`. When the operator passes `tone=harsh` (from `/vibesubin harsh` or direct phrasing like *"don't sugarcoat"*, *"매운 맛"*, *"厳しめ"*), this wrapper forwards the marker as part of the hand-off in step 4; `refactor-verify`'s harsh-mode template takes over from there. No harsh-mode body lives in this file — duplicating `refactor-verify`'s rules would only let them drift. The canonical heading is present so `validate_skills.py`'s harsh-mode coverage check passes; the wrapper's job is to forward the marker, not restate the policy.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"한 모델(Claude)이 쓴 코드를 같은 모델이 다시 리뷰하면 놓치는 게 생깁니다. Codex로 2차 리뷰를 받고 그 findings를 그대로 돌려주면 훨씬 정직한 리뷰가 됩니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"혼자 쓰고 혼자 리뷰하는 워크플로우는 'looks good'으로 끝나기 쉬워요. 브랜치 묶음 하나 끝낼 때마다 2차 모델 리뷰 → 검증 반영 루프가 돌면 회귀 리스크가 현저히 줄어요."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"Claude Code + Codex 플러그인 환경에서만 동작 — `/codex:rescue`를 현재 브랜치 diff에 돌리고, 나온 findings를 refactor-verify의 리뷰 기반 수정 모드로 넘겨 검증·적용합니다. 다른 호스트면 한 줄 안내 후 exit."*
+
+### Severity translation
+
+- CRITICAL → *"지금 당장 — Codex가 치명적 회귀를 잡음"*
+- HIGH → *"이번 주 안에 — 중간 위험 이슈"*
+- MEDIUM → *"다음 릴리즈 전까지 — 개선 제안"*
+- false-positive → *"체크해 봤는데 문제 아니었음"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - **Every fix** → `refactor-verify` (review-driven fix mode). This is the only hand-off; everything substantial delegates here.

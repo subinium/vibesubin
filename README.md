@@ -27,38 +27,57 @@ Using Codex CLI, Cursor, Copilot, or Cline? Jump to [Install](#install).
 
 ## What vibesubin is, and what it isn't
 
-A small bundle of AI skills — `SKILL.md` files — that your agent picks up automatically whenever a request matches. You don't memorize trigger phrases. You just say what you want in plain words — *"split this file safely"*, *"is anything leaking?"*, *"set up deploy"* — and the right skill runs.
+A small bundle of AI skills — `SKILL.md` files — that your agent picks up automatically whenever a request matches. You say what you want in plain words (*"split this file safely"*, *"is anything leaking?"*, *"set up deploy"*) and the right skill runs.
 
-The rule every skill shares: **they don't say *done* until they can show you the evidence.** A refactor isn't finished because the AI rewrote the file; it's finished because four independent checks confirm nothing was dropped, moved, or mis-wired. A security sweep isn't a vibes-based paragraph; it's a triaged list where each hit is either real, a false alarm, or flagged for human review, with a file and a line number.
+The rule every skill shares: **they don't say *done* until they can show you the evidence.** A refactor is finished because four independent checks confirm nothing was dropped, moved, or mis-wired — not because the AI rewrote the file. A security sweep is a triaged list with file:line, not a vibes-based paragraph.
 
-What it is **not**: not a SaaS (nothing leaves your machine), not a compliance tool (no SOC 2 / HIPAA), not a code generator. It improves the repo you already have.
+Not a SaaS (nothing leaves your machine), not a compliance tool (no SOC 2 / HIPAA), not a code generator. It improves the repo you already have.
 
-### Read-only sweeps vs. skills that actually edit
+### Two ways to use it — sweep vs. direct call
 
-This is the thing to get straight early. There are two ways to use the plugin, and they behave very differently.
+- **Sweep mode** (`/vibesubin`). Every code-hygiene skill runs in parallel, *read-only*. You get one prioritized report; nothing changes until you approve items.
+- **Direct call** (`/refactor-verify`, `/setup-ci`, ...). The skill does its full job, including editing files.
+- **Process skills** (`/ship-cycle`) and **host-specific wrappers** (`/codex-fix`) are direct-call only — they're not in the sweep because they mutate external systems (GitHub, Codex) or manage release state.
 
-- **Sweep mode (`/vibesubin`).** Every skill runs in parallel, *read-only*. They produce findings, not fixes. Nothing in your repo changes until you approve items from the report. This is the "I want an honest second opinion" mode.
-- **Direct call (`/refactor-verify`, `/setup-ci`, `/write-for-ai`, `/manage-secrets-env`, `/project-conventions`, `/unify-design`).** The skill does its full job, which includes editing files. `refactor-verify` rewrites your code across the dependency tree. `setup-ci` drops working YAML into `.github/workflows/`. `write-for-ai` edits your README. `manage-secrets-env` scaffolds `.env.example`, `.gitignore`, and runs the full secret lifecycle. `project-conventions` scaffolds Dependabot, enforces pinning, fixes hardcoded paths. `unify-design` scaffolds the tokens file and rewrites components to reference it. These are the "do the work" modes.
-- **Direct call, host-specific (`/codex-fix`).** A thin wrapper for one workflow: invoke `/codex:rescue` on the current branch, hand the findings to `refactor-verify`'s review-driven fix mode, resolve with the standard 4-check verification. Requires Claude Code with the Codex plugin installed; on every other host the skill emits a one-line fallback and exits cleanly. The portable engine lives in `/refactor-verify` — if your review source is anything other than Codex (pasted notes, PR review, Sentry, a scanner), invoke `/refactor-verify` directly instead.
-- **Direct call, orchestrator (`/ship-cycle`).** The pack's first process-category skill. Turns an improvement intent — pasted notes, a `/vibesubin` sweep report, or a named scope like *"perf in src/api/"* — into a well-specified, bilingual issue set; clusters the issues into a milestone that maps 1:1 to a semver version; hands each issue off to the right worker skill (refactor-verify, audit-security, write-for-ai, etc.) for verified execution; aggregates the closed issues into a functional-style changelog entry; and cuts the annotated tag + GitHub release when the milestone closes. Direct-call only, not part of the `/vibesubin` parallel sweep. Requires a GitHub repo with authenticated `gh` CLI; on every other host (non-GitHub remote, unauthenticated gh, hosts without `gh` installed), it emits a graceful one-line fallback and exits.
+Three skills (`fight-repo-rot`, `audit-security`, `manage-assets`) are diagnosis-only and never edit regardless of how you call them.
 
-Three skills never edit regardless of how you call them: **`fight-repo-rot`** (pure diagnosis — finds dead code and smells, hands off to `refactor-verify` for deletions), **`audit-security`** (static triage report only), and **`manage-assets`** (bloat report only — never rewrites history, never deletes files). Six skills — `refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design` — are real workers when called directly and read-only reporters when invoked via the sweep. Two skills are direct-call only and never participate in the parallel sweep: **`codex-fix`** (a thin Claude Code + Codex plugin wrapper — emits a graceful one-line fallback on every other host) and **`ship-cycle`** (the issue-driven development orchestrator — requires GitHub + authenticated `gh` CLI, also with a graceful fallback otherwise). The pack carries two cognitively distinct categories: **10 code-hygiene workers** (the 9 sweep-eligible ones plus `codex-fix`) and **1 process worker** (`ship-cycle`).
+### The skills by area
 
-### Today's lineup
+**Code quality (5)**
 
 | Skill | What you'd ask for | What comes back |
 |---|---|---|
-| [`refactor-verify`](#1-refactor-verify) | *"rename this class"*, *"split this file"*, *"delete this dead code safely"* | A planned change — refactor, rename, split, or delete — executed bottom-up, with four verification passes before it calls itself done |
-| [`audit-security`](#2-audit-security) | *"any secrets leaked?"*, *"is this safe?"* | A short triaged list of real findings with file and line, instead of a 500-line PDF |
-| [`fight-repo-rot`](#3-fight-repo-rot) | *"find dead code"*, *"what can I delete?"* | Dead code tagged HIGH / MEDIUM / LOW confidence, plus god files, hotspots, hardcoded paths, and test rot. Pure diagnosis — never edits |
-| [`write-for-ai`](#4-write-for-ai) | *"write a README / commit / PR"* | Docs the *next* AI session can actually read — and no unbacked marketing adjectives |
-| [`setup-ci`](#5-setup-ci) | *"set up deploy"*, *"push to deploy"* | Working GitHub Actions workflows plus a plain-language walkthrough |
-| [`manage-secrets-env`](#6-manage-secrets-env) | *"where does this secret go?"*, *"is my `.env` leaking?"* | One opinionated answer with a one-line reason, plus the full secret lifecycle |
-| [`project-conventions`](#7-project-conventions) | *"main or dev branch?"*, *"should I pin this dep?"*, *"hardcoded path?"* | One default per decision — GitHub Flow, pinned deps, domain-first layout, no home-dir in source |
-| [`manage-assets`](#8-manage-assets) | *"my repo is huge"*, *"should I use LFS?"* | Bloat report — large files, big blobs in git history, LFS candidates. Pure diagnosis — never rewrites history |
-| [`unify-design`](#9-unify-design) | *"unify the buttons"*, *"these pages look different"*, *"extract these colors to tokens"* | A design-system audit — scaffolds the tokens file if missing, finds every hardcoded hex and magic px, consolidates duplicate components |
-| [`codex-fix`](#10-codex-fix) | *"codex 돌려서 고쳐줘"*, *"run codex and fix"*, *"codex driven fix"* | Thin post-edit wrapper — invokes `/codex:rescue` on the current branch, hands the findings to `refactor-verify` for verified resolution. **Claude Code + Codex plugin only**; graceful one-line fallback on every other host |
-| [`ship-cycle`](#11-ship-cycle) | *"plan a release"*, *"이슈 드리븐"*, *"cut a release"*, *"make issues for this"*, *"bundle these findings into issues"* | Issue-driven development orchestrator — drafts bilingual issues, clusters them into milestones that map 1:1 to semver versions, hands off execution to the right worker per issue label, aggregates closed issues into a changelog and release notes, cuts the tag and GitHub release. **Claude Code with GitHub + authenticated `gh` CLI**; graceful one-line fallback on every other host |
+| [`refactor-verify`](#refactor-verify) | *"rename this class"*, *"split this file"*, *"delete this dead code safely"* | A planned refactor with four verification passes before it calls itself done |
+| [`audit-security`](#audit-security) | *"any secrets leaked?"*, *"is this safe?"* | A short triaged list of real findings with file:line, not a 500-line PDF |
+| [`fight-repo-rot`](#fight-repo-rot) | *"find dead code"*, *"what can I delete?"* | Dead code tagged HIGH / MEDIUM / LOW confidence, plus god files and hotspots. Diagnosis-only |
+| [`manage-assets`](#manage-assets) | *"my repo is huge"*, *"should I use LFS?"* | Bloat report — large files, big blobs in git history, LFS candidates. Never rewrites history |
+| [`unify-design`](#unify-design) | *"unify the buttons"*, *"extract these colors to tokens"* | Design-system audit — scaffolds tokens, finds hardcoded hex and magic px, consolidates duplicates |
+
+**Docs & AI-friendliness (2)**
+
+| Skill | What you'd ask for | What comes back |
+|---|---|---|
+| [`write-for-ai`](#write-for-ai) | *"write a README / commit / PR"* | Docs the *next* AI session can actually read — no unbacked marketing adjectives |
+| [`project-conventions`](#project-conventions) | *"main or dev branch?"*, *"should I pin this dep?"* | One default per decision — GitHub Flow, pinned deps, domain-first layout |
+
+**Infra & config (2)**
+
+| Skill | What you'd ask for | What comes back |
+|---|---|---|
+| [`setup-ci`](#setup-ci) | *"set up deploy"*, *"push to deploy"* | Working GitHub Actions for test + deploy with a plain-language walkthrough |
+| [`manage-secrets-env`](#manage-secrets-env) | *"where does this secret go?"*, *"is my `.env` leaking?"* | One opinionated answer per decision, plus the full secret lifecycle |
+
+**Release process (1)**
+
+| Skill | What you'd ask for | What comes back |
+|---|---|---|
+| [`ship-cycle`](#ship-cycle) | *"plan a release"*, *"이슈 드리븐"*, *"cut a release"* | Issue-driven release orchestrator — drafts bilingual issues, clusters into milestones = versions, hands each off to the right worker, aggregates CHANGELOG, cuts tag + release. **Two tracks** — GitHub (default) or PRD-on-disk for any other host |
+
+**Host-specific wrappers (1)**
+
+| Skill | What you'd ask for | What comes back |
+|---|---|---|
+| [`codex-fix`](#codex-fix) | *"codex 돌려서 고쳐줘"*, *"run codex and fix"* | Thin wrapper: `/codex:rescue` → `refactor-verify`'s review-driven fix mode. **Claude Code + Codex plugin only**; one-line fallback elsewhere |
 
 New skills drop into `plugins/vibesubin/skills/` and are picked up by `/vibesubin` automatically.
 
@@ -66,19 +85,17 @@ New skills drop into `plugins/vibesubin/skills/` and are picked up by `/vibesubi
 
 ## The `/vibesubin` command
 
-One word that runs every skill in the plugin against your repo in parallel, merges findings into a single report, and waits for approval before touching anything.
+One word runs every code-hygiene skill in parallel against your repo, merges findings into a prioritized report, and waits for approval before touching anything.
 
-Here's what happens. The skill tells you in one sentence what it's about to do, and gives you a chance to narrow the scope (*"only src/api"*, *"only security and repo rot"*) before it launches. Otherwise it fans out every specialist as an isolated task agent — each run stays isolated so there's no cross-contamination between agents. All specialists are read-only on this pass; they produce findings, not fixes. If one can't run — say the test suite won't even start — it reports that as its finding and gets out of the way. A single dead specialist never blocks the sweep.
+You can narrow scope before launch (*"only src/api"*, *"only security and repo rot"*). Specialists are read-only in sweep mode; they produce findings, not fixes. Criticals float to the top across categories; multi-specialist hits on the same file jump in priority. You get a vibe-check paragraph, stoplight line per specialist, top-ten fix list, recommended order, and a one-sentence verdict. Full synthesis rules in the [umbrella `SKILL.md`](./plugins/vibesubin/skills/vibesubin/SKILL.md).
 
-When they come back, findings get merged by synthesis rules. Criticals float to the top regardless of category (a leaked secret beats a hotspot beats a missing docstring). When multiple specialists independently flag the same file, that file's priority jumps. Findings are grouped by file because you fix files, not categories. Every item gets one concrete recommendation.
+**Sweep vs. single skill.** Sweep for open-ended questions (*"is this ready to ship?"*, *"second opinion"*). Call a skill directly when you already know what you want (*"refactor this file"* → `/refactor-verify`). Leaked secrets go straight to `/audit-security`'s incident path, skipping the sweep.
 
-You get back a single markdown report: a vibe-check paragraph, a stoplight line per specialist, a top-ten fix list, a recommended order, and a one-sentence verdict. If everything's fine, the verdict says so. Nothing in your repo changes until you approve.
+**Harsh mode.** Opt-in direct framing — `/vibesubin harsh`, *"brutal review"*, *"don't sugarcoat"*, *"매운 맛으로"*, *"厳しめで"*. Read-only still, same evidence, no hedging. Never defaults on.
 
-Full report template and synthesis rules live in the [umbrella `SKILL.md`](./plugins/vibesubin/skills/vibesubin/SKILL.md).
+**Layperson mode.** Opt-in plain-language translation — `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"non-technical"*, *"用通俗的话解释"*. Every finding gets a 3-dimension block (*왜 해야 / 왜 중요 / 무엇을 할지*) in a box format, with severity translated to urgency (CRITICAL → *"지금 당장"*). Stacks with harsh mode. See [`references/layperson-translation.md`](./plugins/vibesubin/skills/vibesubin/references/layperson-translation.md).
 
-**Sweep vs. single skill.** Sweep for open-ended questions: *"I just inherited this repo"*, *"is this ready to ship?"*, *"second opinion"*. Call a skill directly when you already know what you want: *"refactor this file"* → `/refactor-verify`. *"I pushed my `.env`"* → `/audit-security`, urgency first. *"Write the README"* → `/write-for-ai`.
-
-**Harsh mode.** The sweep runs in balanced tone by default — honest but warm. Ask for harsh mode and it stops softening anything: *"`/vibesubin harsh`"*, *"brutal review"*, *"don't sugarcoat"*, *"매운 맛으로"*, *"厳しめで"*. The report is still read-only, still backed by the same evidence, but drops hedging language, leads with the worst finding, and refuses to close on *"looks fine"* when real issues exist. Opt-in only — never defaults to harsh.
+**Skill conflicts.** When two specialists disagree on the same file (e.g., *refactor-verify* says "pause" and *unify-design* says "consolidate"), the report surfaces a `⚠ Skill conflict` block with gap, reason, and each side's basis — operator picks. Catalog in [`references/skill-conflicts.md`](./plugins/vibesubin/skills/vibesubin/references/skill-conflicts.md).
 
 ---
 
@@ -126,113 +143,85 @@ Install problems? Close every agent session and start a fresh one (skills cache 
 
 ## The skills
 
-Each skill lives at [`plugins/vibesubin/skills/`](./plugins/vibesubin/skills/). The writeups below are the user-facing version; the full methodology is in each skill's `SKILL.md`, with deep references in a sibling `references/` folder. You don't need to read the skill files — the AI does that — but they're open source if you're curious.
+Each skill lives at [`plugins/vibesubin/skills/`](./plugins/vibesubin/skills/). The writeups below are the user-facing version; full methodology is in each skill's `SKILL.md`, with deep references in a sibling `references/` folder.
 
-### 1. `refactor-verify`
+### Code quality
 
-The skill I'd defend the hardest. The single biggest failure mode when an AI touches code is the silent one — a function got moved, the rename worked, tests passed, and three weeks later somebody hits a code path still pointing at the old name and the whole thing crashes. `refactor-verify` exists to make that specific kind of silent failure impossible.
+#### `refactor-verify`
 
-It covers two change families — structural refactors (move, rename, split, merge, extract, inline) and safe deletions (removing code `fight-repo-rot` has confirmed is dead). Both use the same four-check proof.
+The skill I'd defend the hardest. The single biggest failure mode when AI touches code is the silent one — a rename worked, tests passed, and three weeks later somebody hits a code path still pointing at the old name and the whole thing crashes. `refactor-verify` exists to make that impossible.
 
-Before touching anything, it snapshots the current state: which functions exist, which file each one lives in, whether tests pass right now, what the linter says. That's the *before* picture. Then it decomposes the change into a dependency tree and works from the leaves up, so you're never in a half-done state mid-run.
+Covers structural refactors (move, rename, split, merge, extract, inline) and safe deletions (removing code `fight-repo-rot` confirmed dead). Both use the same four-check proof: symbol set preservation, byte-equivalence of moved code, re-run of typecheck/lint/tests/smoke, and caller-audit across the import graph. If any of the four fails, the skill doesn't advance. It will not touch files you didn't ask about, say *done* with any check failing, or delete LOW-confidence dead code without review.
 
-After every step, four independent checks run. One walks the symbol set and confirms every public name that existed before still exists (or was deliberately removed). One confirms the moved or kept code is bit-for-bit what it was, modulo whitespace. One re-runs typecheck, lint, tests, and a smoke run. And the fourth — the one that catches the most real bugs — walks every caller of every affected symbol and confirms it points at the right place, or at nothing if the symbol was deleted. If any of the four fails, the skill doesn't advance.
+#### `audit-security`
 
-Some things it will not do: touch files you didn't ask it to touch, say *done* with any check failing, fabricate a test result when the suite can't start, rewrite function bodies during a move, or delete code that `fight-repo-rot` flagged LOW confidence without human review.
+Enterprise scanners flag 500 things, 490 of which are false alarms. `audit-security` is the opposite: a short, hand-curated list of patterns that catch real mistakes, every hit triaged as real / false-alarm / needs-review with a one-line reason.
 
-### 2. `audit-security`
+Checks for the obvious (secrets in commits, SQL concatenation, `eval`/`exec`/`pickle.loads`), the less obvious (user-controlled file paths, unescaped HTML, cookies without `httpOnly`/`Secure`, wildcard CORS), and the forgotten (`.env` in git history, `.pem`, SSH keys). Severities are in plain terms — *"a stranger can read every user's data"* beats *"CWE-89"*. Not a penetration test; static only, no network.
 
-Enterprise security scanners have a noise problem. They flag five hundred things, four hundred and ninety of which are false alarms, so after a week people ignore the whole thing. Real criticals drown. `audit-security` is the opposite shape: a short, hand-curated list of patterns that catch mistakes people actually make, with every hit triaged — real, false alarm, or needs-human-review — and a one-line reason.
+#### `fight-repo-rot`
 
-It checks for the obvious (secrets in commits, SQL built by string concatenation, `eval`/`exec`/`pickle.loads` on untrusted input), the less obvious (user-controlled paths in file reads, unescaped input in HTML, cookies missing `httpOnly`/`Secure`, wildcard CORS), and the things people forget (`.env` in git history, `.pem` and SSH keys). Severities are in plain terms — *"a stranger can read every user's data"* beats *"CWE-89"*.
+Dead-code detector first, clutter spotter second, pure diagnosis always. Finds functions nothing calls, files nothing imports, orphaned modules, dependencies in the manifest that are never imported. Also flags god files, hotspots (high churn × high complexity), hardcoded absolute paths, literal IPs, stale `TODO`/`FIXME` older than six months.
 
-It does not replace a penetration test. It's a static sweep — no network, no running system. And it will not hide anything embarrassing behind a *"looks fine"* summary.
+Every dead-code candidate carries a confidence tag: **HIGH** (no references anywhere — safe to hand off to `refactor-verify`), **MEDIUM** (referenced only from tests or via dynamic dispatch — operator confirms), **LOW** (exported symbol, generated code, reflection/DI — human review required). Never edits, never deletes. Hands off to `refactor-verify` for deletions, `project-conventions` for hardcoded-path fixes, `audit-security` for CVE-class dep rot.
 
-### 3. `fight-repo-rot`
+#### `manage-assets`
 
-A dead-code detector first, a clutter spotter second, and a pure diagnosis always. Functions nothing calls, files nothing imports, orphaned modules, exports that have no consumers, dependencies in the manifest that are never imported — those are the things it's actually built to find. On top of that it flags the usual smell set: god files, god functions, hardcoded absolute paths, literal IPs, `TODO` / `FIXME` / `HACK` older than six months, and the files at the top of the *"most likely to bite you next"* list (the ones that change a lot *and* are complicated).
+Bloat detector, not a code analyzer. Surfaces binary weight: file sizes in the working tree, git-history blob sizes (the invisible ones), LFS migration candidates, asset-directory growth, duplicate binaries. **Diagnosis-only** — never deletes, never rewrites history, never runs `git filter-repo` or `git lfs migrate`. Approved removals hand off to `refactor-verify` (for verified history rewrites), `manage-secrets-env` (if `.gitignore`-shaped), or `fight-repo-rot` (if also unreferenced).
 
-Every dead-code candidate comes back with a confidence tag:
+#### `unify-design`
 
-- **HIGH** — no references anywhere (grep, LSP, import graph, tests, config files). Safe to hand off to `refactor-verify` for deletion.
-- **MEDIUM** — referenced only from tests, or the language uses dynamic dispatch (Python, Ruby, loose JS). Operator confirms before deletion.
-- **LOW** — exported symbol, generated code, reflection / DI / annotations involved. Human review required; never auto-hand-off.
+Design-system consistency for frontends — tokens + duplicates audit. Treats brand identity (colors, spacing, typography, radii, shadows, breakpoints, core components) as the single source of truth and rewrites drift back to tokens. Detects the framework (Tailwind v3/v4, CSS Modules, styled-components, Emotion, MUI, Chakra, vanilla CSS) and uses the project's own idioms, never a foreign pattern.
 
-This skill is deliberately hands-off: it never edits, never deletes, never runs verification. It surfaces problems with evidence next to each one, and hands off to `refactor-verify` for deletions and splits, to `project-conventions` for hardcoded-path fixes, and to `audit-security` for CVE dependency rot. Nothing gets touched until you approve the list.
+Three moves: scaffolds tokens if missing (asks operator for primary color + display font), audits drift (hardcoded hex, arbitrary Tailwind values like `w-[432px]`, inline style objects, duplicate Button/Card/Nav), fixes drift (small replacements direct; multi-file consolidation hands off to `refactor-verify`). Won't invent a brand and won't rewrite across frameworks.
 
-### 4. `write-for-ai`
+### Docs & AI-friendliness
 
-Most docs are written for a human reader who skims once. AI reads them differently: it re-parses them fresh every session, prefers tables over prose, follows explicit file paths in backticks, and needs *"never do X"* stated declaratively rather than buried in a story. `write-for-ai` writes for that reader — and the docs happen to work better for humans too, because structure is structure.
+#### `write-for-ai`
 
-You give it a thing to write — README, commit, PR description, architecture doc, `CLAUDE.md`, `AGENTS.md` — and it starts by reading the repo cold, the way a fresh AI session would. Then it extracts the invariants: not just *what* the project does, but the rules it follows. It fills in the relevant template and, critically, verifies every claim before writing it. If the README says `pnpm test` runs the suite, the skill runs `pnpm test` first.
+Docs written for the *next* AI session as well as humans. Reads the repo cold the way a fresh AI session would, extracts invariants (not just what the project does, but the rules it follows), fills the relevant template (README, commit, PR description, architecture doc, `CLAUDE.md`, `AGENTS.md`), and verifies every claim before writing it — if the README says `pnpm test` runs the suite, the skill runs `pnpm test` first.
 
-What this prevents: you ask an AI to rewrite the README and it does a good job, except a paragraph about the environment variables silently disappears. You don't notice because you don't remember what was there. The next AI session starts from the new README and has no idea your env layout exists.
+Prevents the classic failure mode: AI rewrites the README and does a good job, except a paragraph about environment variables silently disappears. You don't notice. The next session starts from the new README and has no idea your env layout exists.
 
-### 5. `setup-ci`
+#### `project-conventions`
 
-CI is the biggest productivity unlock in the plugin — once it's set up correctly, *deploy* stops being a thing you think about and becomes `git push`. Unfortunately, *setting it up correctly* is where most non-developers give up.
+Lower-stakes structural defaults: branch strategy, dep pinning, directory layout, absolute-path hygiene. Defaults — GitHub Flow (`main` + short-lived feature branches, no `dev`), exact-pinned prod deps with a committed lockfile, Dependabot/Renovate monthly, domain-first layout, no absolute paths in source. Every rule has a one-sentence reason.
 
-The skill starts by explaining the concepts in plain language — what a runner is, what Secrets are, why `concurrency` groups matter, why you want a health check after every deploy. Then it detects your stack from `package.json` / `requirements.txt` / `Cargo.toml` / `go.mod`, picks the right test and lint commands, and scaffolds two working workflows. `test.yml` runs tests and lint on every push and PR with explicit timeouts. `deploy.yml` deploys on success using the pattern that fits your host — SSH, Vercel, Fly.io, Cloud Run, Netlify — with concurrency guards, SSH key cleanup, and a post-deploy health check.
+On a new project it scaffolds `dependabot.yml` and a branch-strategy note. On existing ones it audits deviations and hands off multi-file fixes to `refactor-verify`.
 
-Two things it won't do on purpose: it won't add Secrets for you (Secrets live in the GitHub UI; the skill tells you which ones and what they contain, but never handles credentials itself), and it won't guess your host.
+### Infra & config
 
-### 6. `manage-secrets-env`
+#### `setup-ci`
 
-Secrets are the high-stakes slice of "where does this value go" — a misplaced credential is an incident, not a style preference. `manage-secrets-env` owns that slice: the four-bucket decision tree (source constant / env var / local `.env` / CI secret store), the `.env.example` ↔ `.env` drift check, the default-safe `.gitignore` template, and the full lifecycle (add / update / rotate / remove / migrate / audit drift / provision a new environment).
+CI is the biggest productivity unlock in the pack — once it's set up, deploy stops being a thing you think about and becomes `git push`. Starts by explaining the concepts in plain language (runners, Secrets, `concurrency` groups, post-deploy health checks), detects your stack from `package.json` / `requirements.txt` / `Cargo.toml` / `go.mod`, and scaffolds two workflows: `test.yml` (tests + lint with timeouts) and `deploy.yml` (per-host pattern — SSH, Vercel, Fly.io, Cloud Run, Netlify — with concurrency guards, SSH key cleanup, health check).
 
-Defaults, shortest form: constants that never change at runtime go in code; local-only secrets go in `.env` with a committed `.env.example`; production secrets go in your CI provider's secret store; runtime config changes between environments as environment variables; `.gitignore` ships with every secret-shaped entry pre-filled.
+Won't handle Secrets for you (they live in the GitHub UI) and won't guess your host.
 
-On a new project it scaffolds `.env.example`, `.gitignore`, and startup validation. On an existing one it audits what's there, flags tracked-secret files as incident-class findings, and hands off to `audit-security` when something has already leaked.
+#### `manage-secrets-env`
 
-### 7. `project-conventions`
+The high-stakes slice of "where does this value go" — a misplaced credential is an incident, not a style preference. Four-bucket decision tree (source constant / env var / local `.env` / CI secret store), `.env.example` ↔ `.env` drift check, default-safe `.gitignore` template, full lifecycle (add / update / rotate / remove / migrate / audit / provision).
 
-The lower-stakes companion to `manage-secrets-env`. Every project has structural decisions that aren't about secrets: main-or-dev branch, pinned-or-floating dependencies, domain-or-type directory layout, absolute-path bugs creeping into source. Most of those have one answer that works for 95% of projects, and picking that answer should not be a session-long conversation.
+Defaults: runtime-invariant constants in code; local secrets in `.env` with committed `.env.example`; production secrets in CI secret store; environment-variable runtime config; `.gitignore` ships with every secret-shape pattern pre-filled. On an existing project it audits and flags tracked-secret files as incident-class findings — handing off to `audit-security` when something already leaked.
 
-Defaults: GitHub Flow (`main` plus short-lived feature branches, no `dev`), exact-pinned production dependencies with a committed lockfile, Dependabot or Renovate on a monthly cadence, domain-first directory layout, no absolute paths in source. Every rule has a one-sentence reason.
+### Release process
 
-On a new project it scaffolds `dependabot.yml` and a branch-strategy note. On an existing one it audits branch deviations, unpinned dependencies, directory smells, and hardcoded paths — and hands off multi-file fixes to `refactor-verify` so nothing gets rewritten without a verification pass.
+#### `ship-cycle`
 
-### 8. `manage-assets`
+The pack's only **process-category** skill. Acts on the lifecycle around the code — issues, milestones, versions, tags, releases, changelog. Runs the loop: intake → draft → cluster → confirm → create → branch → execute → release. Bilingual issue bodies (Korean / English / Japanese / Chinese), semver decision tree (bug/perf/refactor → patch; additive feat → minor; breaking → major), cap of ~5 items per patch.
 
-A bloat detector, not a code analyzer. Repos get slow from binaries — a 300 MB SQLite checked in last year, a `dist/` directory that snuck past `.gitignore`, a tracked `.psd` that really wanted to be LFS. `manage-assets` surfaces that weight: file sizes in the working tree, git-history blob sizes (the invisible ones), LFS migration candidates, asset-directory growth, duplicate binaries.
+**Two tracks**. **GitHub track** (default) uses `gh` API — issues, milestones, PRs, releases live on GitHub; `Closes #<N>` footer auto-closes on merge. **PRD track** (any other host) uses local markdown files under `docs/release-cycle/vX.Y.Z/` — same methodology, same conventions, different durable audit trail. Operator picks at Step 1.5. **Conventions are enforced** per [`references/pr-branch-conventions.md`](./plugins/vibesubin/skills/ship-cycle/references/pr-branch-conventions.md): GitHub Flow branches (`<type>/<issue-N>-<slug>`), Conventional Commits + mandatory `Closes #<N>` footer, PR template with six required sections (Context / What changed / Test plan / Docs plan / Risk / Handoff notes), rebase-first merge with `--force-with-lease`, no force-push to `main` / `master` / `release/*`.
 
-This skill is **diagnosis-only**. It never deletes a file, never rewrites history, never runs `git filter-repo` or `git lfs migrate`. When the operator approves a removal, the work hands off to `refactor-verify` (which owns verification for destructive operations like history rewrites), or to `manage-secrets-env` if the finding is `.gitignore`-shaped, or to `fight-repo-rot` if the asset is also unreferenced.
+Won't skip operator approval on the draft issue set, won't push a tag without CI green on main, won't mix unrelated items into one milestone.
 
-It pairs especially well with open-sourcing — the first clone on a slow connection is a blunt measurement of how much weight your repo is carrying.
+### Host-specific wrappers
 
-### 9. `unify-design`
+#### `codex-fix`
 
-A web-dev skill for the thing every vibe-coded project eventually needs and never gets around to: one design system, consistently referenced, no drift. Most projects ship with three different primary blues, two button implementations, five slightly different paddings, a logo pasted into six files as raw `<img>` tags, and two pages whose navigation doesn't match. Each is invisible in isolation and obvious to a first-time visitor.
+Thin wrapper (~100 lines) for one specific workflow: *"I've finished a batch of edits. Run Codex for a second-model review. Let Claude resolve with verification."* Invokes `/codex:rescue` on the current branch diff, hands findings to `refactor-verify`'s review-driven fix mode.
 
-`unify-design` treats the project's brand identity — colors, spacing, typography, radii, shadows, breakpoints, and the core components — as the single source of truth, and rewrites drift back to tokens. It detects the framework (Tailwind v3 and v4, CSS Modules, styled-components, Emotion, Material UI, Chakra UI, vanilla CSS with custom properties) and uses the project's own idioms — Tailwind theme, CSS variables, or a theme object — never a foreign pattern.
+**Claude Code + Codex plugin only.** On any other host it prints *"Codex plugin not detected — invoke `/refactor-verify` directly with findings instead."* and exits cleanly.
 
-It does three things. First, it establishes the source of truth: if there's no tokens file, it scaffolds one with opinionated defaults (spacing scale, typography scale, radius scale) and asks the operator for the two values it can't guess — the primary color and the display font. Second, it audits for drift — hardcoded hex values outside the tokens file, arbitrary Tailwind values like `w-[432px]`, inline style objects, duplicate Button/Card/Nav/Logo components, near-match colors that were obviously a copy-paste error. Third, it fixes the drift: small replacements apply directly, multi-file refactors hand off to `refactor-verify` so the token rename or component consolidation gets call-site verification.
-
-Two things it won't do on purpose: invent a brand when the project has none (it asks), and rewrite across frameworks (if you're on styled-components, it uses your theme object, not Tailwind's).
-
-### 10. `codex-fix`
-
-The pack's first — and intentionally only — host-specific skill. It exists because one specific workflow happens often enough for one specific operator to justify a worker slot: *"I've finished a batch of edits. Run Codex for a second-model review. Feed the findings back. Let Claude resolve them with verification."* The copy-paste step between Codex output and Claude resolution was adding friction session after session, so `codex-fix` automates it.
-
-It is deliberately thin — about 100 lines — because it delegates everything substantial to `refactor-verify`'s review-driven fix mode. This wrapper owns only the Codex-specific glue: the host check, the templated `/codex:rescue` prompt scoped to the current branch's diff, the output collection, and the hand-off. Parsing findings, triaging real / false-positive / defer / duplicate, mapping each item to a commit via `git blame`, planning the dependency tree, executing leaves-up with the 4-check verification, committing with back-references to the review items — all of that belongs to `refactor-verify`.
-
-**Host requirement.** This skill only fires on Claude Code with the Codex plugin installed. On every other host (Codex CLI itself, Cursor, Copilot, Cline, or Claude Code without the plugin), its first action is a graceful one-line fallback and exit: *"Codex plugin not detected — this skill is Claude Code + Codex specific. For review-driven fixes from a different source, invoke `/refactor-verify` directly with the findings."* It never hangs, never errors loudly.
-
-**When to prefer this vs. `/refactor-verify` directly.** Use `/codex-fix` if you are on Claude Code + Codex *and* the review source is Codex. Use `/refactor-verify` directly (with pasted findings) if the review source is anything else — human PR review, Sentry alert, `gitleaks`, Semgrep, GitHub Advanced Security, manual notes. Same engine, different input path.
-
-This is the pack's first **host-locked** skill and is covered by the portable-engine-plus-thin-wrapper pattern documented as rule 9 in [`docs/PHILOSOPHY.md`](./docs/PHILOSOPHY.md). Future wrappers for other input sources (Sentry, gitleaks, etc.) should follow the same shape: thin glue around the portable engine, with the host dependency declared explicitly in frontmatter and a graceful fallback as the first action.
-
-### 11. `ship-cycle`
-
-The pack's first and currently only **process-category** skill. Every other skill in vibesubin acts on code; this one acts on the *lifecycle around* the code — issues, milestones, versions, tags, releases, changelog. It exists because issue-driven development is a real workflow with a real cost when done by hand, and because the data points it leaves behind (a well-structured issue, a back-referenced commit, a milestone that matches a semver tag) make every *next* AI session faster.
-
-The loop it runs: intake → draft → cluster → confirm → create → branch → execute → release. Intake accepts three input shapes — pasted findings, a `/vibesubin` sweep report, or a named scope. Draft fills a bilingual issue template per item (Problem / Acceptance criteria / Implementation notes with skill hand-off / Linked) — operator picks the body language up front (Korean / English / Japanese / Chinese), and section headings stay in English for `gh` parsing stability. Cluster applies a semver decision tree (bug / perf / internal refactor / test / docs-only → patch; additive feature or new skill → minor; breaking → major) with a cap of ~5 items per patch to keep milestones coherent. Confirm shows a table with milestones, issue counts, and estimated sizes, and waits for operator approval before any mutation. Create runs `gh issue create` per item with labels and milestone attached; branch scaffolds `issue-<N>-<slug>` names; execute hands each issue off to the right worker based on the `type` label — bugs and refactors to `refactor-verify`, security to `audit-security` chained to `refactor-verify`, docs to `write-for-ai`, CI to `setup-ci`, secrets to `manage-secrets-env`, conventions to `project-conventions`, design to `unify-design`. Release aggregates closed issues into a functional-style changelog entry, bumps both manifests, commits `chore(release): vX.Y.Z`, cuts an annotated tag, pushes, writes release notes to a temp file, runs `gh release create`, and verifies with `gh release view`.
-
-Two things it will not do: skip the operator's approval on the draft issue set (every mutation is opt-in), and push a tag without CI green on main and `CHANGELOG.md` updated first. It also will not mix unrelated items into one milestone for convenience, will not use an English-only template when the operator chose Korean, and will not auto-close issues via commits that did not pass the handing-off skill's verification.
-
-**Host requirement.** Runs only on a GitHub repo with an authenticated `gh` CLI (`gh auth status` must succeed). On any non-GitHub remote, unauthenticated `gh`, or host without `gh` installed, its first action is a graceful one-line fallback and exit: *"`/ship-cycle` requires a GitHub repo with authenticated `gh` CLI — run `gh auth login` or invoke the underlying workers (`/refactor-verify`, `/audit-security`, etc.) directly on non-GitHub hosts."* It never hangs, never errors loudly.
-
-**When to prefer this vs. the underlying workers directly.** Use `/ship-cycle` when the unit of work is a *release cycle* (multi-item, needs tracking, needs changelog + tag at the end). Use the underlying worker directly when the unit is one change — one refactor, one security fix, one doc rewrite. `ship-cycle` is orchestration; everything it does, the underlying workers can still do on their own when invoked by name.
+Use `/codex-fix` when on Claude Code + Codex *and* the review source is Codex. Use `/refactor-verify` directly for any other source (human PR review, Sentry, `gitleaks`, Semgrep, pasted notes) — same engine, different input path. Covered by the portable-engine-plus-thin-wrapper pattern in [`docs/PHILOSOPHY.md`](./docs/PHILOSOPHY.md) rule 9.
 
 ---
 

@@ -288,6 +288,33 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, fabricate severities, or become rude. Every harsh statement must still cite the same file, line, or `git ls-files` match the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"비밀번호·API 키 하나가 깃에 들어가면 그 순간 공격 가능한 상태가 됩니다. 심지어 나중에 지워도 깃 히스토리에는 남아요. '한 번 유출은 영원한 유출'."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *".env를 실수로 커밋하거나, 프로덕션 비밀을 실수로 로컬에 둔다거나, 환경 변수 이름이 어긋나면, 각각 데이터 유출·서비스 중단·모호한 버그로 직결됩니다."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"모든 설정값을 4개 바구니(코드 상수 / env 변수 / 로컬 .env / CI 시크릿) 중 어디에 둘지 결정 규칙을 적용하고, `.env.example`·`.gitignore` 템플릿을 맞추고, 이미 깃에 들어간 시크릿이 있으면 rotate·제거 워크플로우로 넘깁니다."*
+
+### Severity translation
+
+- CRITICAL → *"지금 당장 rotate + 히스토리 재작성 — 시크릿이 이미 공개됨"*
+- HIGH → *"이번 주 안에 — .env가 추적 중이거나 .gitignore 빠짐"*
+- MEDIUM → *".env.example과 실제 .env가 drift — 새 개발자 세팅 시 혼란"*
+- LOW → *"환경 변수 이름 일관성 부족"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - Secrets already committed to git → `audit-security` immediately for blast-radius assessment, then run the *Rotate a secret* workflow above as the incident path.

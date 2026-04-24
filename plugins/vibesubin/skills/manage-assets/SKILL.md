@@ -248,6 +248,33 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, exaggerate sizes, or become rude. Every harsh statement must cite the same `git rev-list` / `du` / `git ls-files` output the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"저장소에 무거운 바이너리(이미지·DB 덤프·dist 폴더·압축 파일)가 쌓이면, 처음 clone하는 사람은 1GB를 받고, CI는 매번 느려집니다."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"큰 저장소는 오픈소스화·새 팀원 온보딩·CI 속도에 전부 영향을 줍니다. 한 번 깃 히스토리에 들어간 큰 파일은 나중에 빼려면 히스토리 재작성이라는 위험한 작업이 필요해요."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"작업 트리와 깃 히스토리 모두를 스캔해서 10MB 넘는 파일·LFS로 가야 할 것·자산 폴더 증가 추이·중복 바이너리를 찾아 보고합니다. 지우는 건 refactor-verify·manage-secrets-env·fight-repo-rot에 넘기고, 이 스킬은 손대지 않습니다."*
+
+### Severity translation
+
+- CRITICAL → *"지금 당장 — 100MB 넘는 단일 바이너리 또는 시크릿 shape 바이너리"*
+- HIGH → *"이번 주 안에 — LFS로 가야 할 큰 파일 여러 개"*
+- MEDIUM → *"자산 폴더가 꾸준히 커지고 있음 — 방치하면 HIGH로 악화"*
+- LOW → *"중복 바이너리 소량 — 정리하면 좋지만 급하지 않음"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
+
 ## Hand-offs
 
 - **Delete from HEAD only** (file is currently tracked, no history rewrite needed) → `refactor-verify` with `git rm` plus `.gitignore` addition

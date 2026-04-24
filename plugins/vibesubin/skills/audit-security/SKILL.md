@@ -356,6 +356,33 @@ When the task context contains the `tone=harsh` marker (usually set by the `/vib
 
 Harsh mode does not invent findings, fabricate CVSS scores, or become rude. Every harsh statement must be backed by the same evidence the balanced version would cite. The change is framing, not substance.
 
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"보안 구멍은 조용해요. 지금 돌아는 가는데, 악의적인 사용자 한 명이 SQL 쿼리 한 줄로 전체 사용자 데이터를 가져갈 수 있어요."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"보안 취약점은 배포 직후부터 공격 대상입니다. 몇 시간 안에 첫 시도가 들어오는 게 흔해요."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"비밀번호·API 키가 깃 히스토리에 남았는지, 사용자 입력이 검증 없이 DB에 들어가는지, 쿠키 보안 속성이 빠졌는지 등을 짧게 10가지로 체크하고 실제 위험만 추립니다."*
+
+### Severity translation
+
+- CRITICAL → *"지금 당장 — 이 상태로 배포하면 데이터 유출"*
+- HIGH → *"이번 주 안에 — 배포 전 막아야 함"*
+- MEDIUM → *"다음 릴리즈 전까지"*
+- False positive → *"안심해도 됨 — 체크해 봤는데 문제 아니었음"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase (*"지금 당장"* / *"이번 주 안에"* / *"다음 릴리즈 전까지"* / *"시간 날 때"*) and the finding number. Footer names the hand-off skill (e.g., *"어떤 스킬이 고치나요? — refactor-verify"*).
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, confidence tags, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added. Layperson mode is presentation-only.
+
 ## Hand-offs
 
 - Critical findings involving refactoring sensitive code → hand off to `refactor-verify` for the fix

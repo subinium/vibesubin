@@ -1,6 +1,6 @@
 ---
 name: ship-cycle
-description: Issue-driven development orchestrator. Turns improvement intent into a well-specified, bilingual issue set; clusters issues into milestones that map 1:1 to semver versions; guides branch, commit, and PR hygiene; generates changelog entries and release notes deterministically from closed issues; leaves a durable audit trail for the next AI session. Direct-call only — not part of the /vibesubin parallel sweep. Host requirement — GitHub repo with authenticated `gh` CLI; on any other host or with `gh` unauthenticated, emits a one-line fallback and exits.
+description: Issue-driven development orchestrator. Turns improvement intent into a well-specified, bilingual issue set; clusters issues into milestones that map 1:1 to semver versions; enforces branch, commit, and PR conventions (GitHub Flow — `<type>/<issue-N>-<slug>`, Conventional Commits, mandatory PR template, rebase-first merge); generates changelog entries and release notes deterministically from closed issues; leaves a durable audit trail for the next AI session. Direct-call only — not part of the /vibesubin parallel sweep. Two tracks — **GitHub track** (default) on GitHub with authenticated `gh` CLI; **PRD track** on any other host, using local markdown files under `docs/release-cycle/vX.Y.Z/` as the durable audit trail. Operator picks at Step 1.5.
 when_to_use: Trigger on "plan a release", "릴리즈 계획", "cut a release", "릴리즈 하자", "이슈로 남기고 처리", "make issues for this", "bundle these findings into issues", "turn sweep findings into issues", "issue-driven", "이슈 드리븐", "roadmap for 0.N.0", "ship cycle", "tag and release", "release notes 써줘", "generate changelog from PRs", "여러 수정을 묶어서 릴리즈".
 allowed-tools: Read Grep Glob Task Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git diff-index *) Bash(git branch *) Bash(git checkout *) Bash(git tag *) Bash(git push *) Bash(git rev-parse *) Bash(git merge-base *) Bash(gh issue *) Bash(gh pr *) Bash(gh release *) Bash(gh api *) Bash(gh repo *) Bash(gh auth *) Bash(ls *) Bash(test *) Bash(cat *) Bash(wc *)
 ---
@@ -29,20 +29,21 @@ Not a replacement for:
 - **`write-for-ai`** — owns commit-message and PR-body style. This skill enforces *when* commits happen (`Closes #N` footer on each) and *which* PRs block a release, but not the prose inside them.
 - **`project-conventions`** — owns branch-strategy defaults. This skill suggests `issue-<N>-<slug>` branch names, but defers to an existing project convention when one exists.
 
-## Host requirement and preconditions
+## Host check and track selection
 
-GitHub repo with authenticated `gh` CLI. Check both in Step 1; on any non-GitHub host or with `gh` unauthenticated, emit a one-line fallback and stop — no retry, no alternative path.
+ship-cycle runs in one of two tracks. Both follow the same 11-step methodology and the same conventions (see `references/pr-branch-conventions.md`); they differ only in where the audit trail lives.
+
+- **GitHub track** (default) — GitHub repo with authenticated `gh` CLI. Issues, milestones, PRs, and releases live on GitHub. The `Closes #<N>` footer auto-closes issues at merge.
+- **PRD track** — any other host (GitLab, Gitea, Forgejo, Bitbucket, self-hosted, plain git with no remote, or `gh` unauthenticated). Issues are markdown files under `docs/release-cycle/vX.Y.Z/issues/NNN-slug.md`; release artifacts live in the same directory. See `references/prd-track.md` for the full step-by-step mapping.
+
+Detection at Step 1:
 
 ```bash
-gh repo view --json name >/dev/null 2>&1   || echo "not-a-gh-repo"
-gh auth status >/dev/null 2>&1             || echo "gh-not-authenticated"
+gh repo view --json name  >/dev/null 2>&1 && HAS_GH_REPO=1   || HAS_GH_REPO=0
+gh auth status            >/dev/null 2>&1 && HAS_GH_AUTH=1   || HAS_GH_AUTH=0
 ```
 
-If either prints a marker, respond with exactly one sentence and stop:
-
-> *"`/ship-cycle` requires a GitHub repo with authenticated `gh` CLI — run `gh auth login` or invoke the underlying workers (`/refactor-verify`, `/audit-security`, etc.) directly on non-GitHub hosts."*
-
-Graceful pass is the expected outcome on non-matching hosts; it is not an error.
+If both are `1` → default to GitHub track. If either is `0` → default to PRD track. Step 1.5 surfaces the detection and lets the operator override.
 
 ## State assumptions — before acting
 
@@ -50,13 +51,15 @@ Before proceeding past Step 2, write an explicit `Assumptions` block to the sess
 
 ```
 ## Assumptions
+- Track:                   <GitHub | PRD (local)>
 - Repo state:              <clean | dirty (N staged, M unstaged) | detached HEAD>
 - Default branch:          <main | master | dev>
 - Current version:         <from manifests — path and value — or "pre-1.0 / no manifests, using latest tag">
 - Work scope:              <pasted findings | sweep output at /tmp/... | user-named area "perf in src/api/">
 - Issue language:          <Korean | English | Japanese | Chinese>
 - Milestone target:        <new version to cut — vX.Y.Z | just-issues mode, no release this cycle>
-- Existing branch convention: <detected from CONTRIBUTING.md / root CLAUDE.md / last 20 branch names — e.g., "feature/<topic>" from project-conventions; default fallback: "issue-<N>-<slug>">
+- Branch convention:       <default: <type>/<issue-N>-<slug> per pr-branch-conventions.md — or detected existing convention (e.g., "feature/<topic>") if CONTRIBUTING.md / CLAUDE.md / last 20 branches show one>
+- Merge strategy:          <squash (default) | rebase | merge — detected from repo settings + CONTRIBUTING.md>
 ```
 
 Stop and ask when:
@@ -86,12 +89,30 @@ Explicitly: `ship-cycle` does **not** run the review itself. It orchestrates aro
 
 ### Step 1 — Host check
 
-Run the two `gh` checks above. On failure, one-line fallback and stop. On success, capture:
+Run the two `gh` checks from the Host-check section above. On success, capture:
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
 ```
+
+On failure (not a GitHub repo, or `gh` unauthenticated), do NOT stop. Fall through to Step 1.5 — the PRD track is the fallback path, not an exit.
+
+### Step 1.5 — Track selection
+
+Surface the detected track and let the operator confirm or override:
+
+```
+## Track
+Detected: <GitHub | PRD (local)>
+Reason: <gh repo + gh auth both OK | gh repo missing | gh unauthenticated | non-GitHub remote: <URL>>
+
+Proceed on this track? (yes / switch to <other>)
+```
+
+Default is the detected track. Accept the operator's override — an operator on a GitHub repo may still prefer the PRD track for a local-first audit trail, and vice versa. Wait for confirmation before Step 2.
+
+On the **PRD track**, the rest of this SKILL.md applies with the step-by-step mapping at `references/prd-track.md` — read it alongside the main procedure. The conventions at `references/pr-branch-conventions.md` apply to both tracks.
 
 ### Step 2 — State assumptions
 
@@ -213,11 +234,13 @@ Dry-run mode: if the operator requested `dry-run`, print the commands and `BODY`
 
 ### Step 9 — Branch + execute
 
-For each created issue, suggest a branch name and hand off to the right worker. If the Assumptions block detected an existing convention (e.g., `feature/<topic>` from `project-conventions`), use that and derive the topic from the issue slug; use `issue-<N>-<slug>` only as the fallback.
+For each created issue, derive the branch name per `references/pr-branch-conventions.md` §1 and hand off to the right worker. Default shape:
 
 ```bash
-BRANCH="issue-<N>-<kebab-slug>"   # fallback when no project convention was detected
+BRANCH="<type>/issue-<N>-<kebab-slug>"   # e.g., fix/issue-42-auth-session-refresh
 ```
+
+`<type>` matches the issue's primary `type` label (`feat`, `fix`, `refactor`, `perf`, `docs`, `chore`, `security`, `test`, `ci`, `design`). If the repo has a detected existing convention per §1's detection rule (≥10 of last 20 branches matching, or explicit `CONTRIBUTING.md` / `CLAUDE.md` rule), defer to that convention and still embed the issue number.
 
 Routing by label (hand-off, not invocation — `ship-cycle` does not execute code changes):
 
@@ -234,9 +257,11 @@ Routing by label (hand-off, not invocation — `ship-cycle` does not execute cod
 | `chore` + `assets` | `/manage-assets` |
 | `chore` + `dead-code` | `/fight-repo-rot` → `/refactor-verify` |
 
-Commit footer: `Closes #<N>`. PR body: `Closes #<N>` as the first line after the summary. Both are load-bearing for GitHub's auto-close and for Step 10's aggregation query.
+Commit format: Conventional Commits + mandatory `Closes #<N>` footer per `references/pr-branch-conventions.md` §2. PR body: the six-section template (Context / What changed / Test plan / Docs plan / Risk / Handoff notes) per §3, with `Closes #<N>` as the first line. These are load-bearing for GitHub's auto-close, for Step 10's aggregation query, and for the Step 11 audit trail.
 
-When the worker reports done and the PR merges, GitHub auto-closes the issue. If the worker cannot complete the item (baseline-red, missing context), leave the issue open and tag it `blocked` with a reason in a comment.
+Rebase and conflict handling follow §5 — rebase-first workflow, `--force-with-lease` only (never plain `--force`), no force-push to `main` / `master` / `release/*`. Merge strategy per §4 (repo settings first, `CONTRIBUTING.md` second, `--squash` default).
+
+When the worker reports done and the PR merges, GitHub auto-closes the issue (GitHub track) or ship-cycle updates the issue file's frontmatter (PRD track — see `references/prd-track.md`). If the worker cannot complete the item (baseline-red, missing context), leave the issue open and tag it `blocked` with a reason in a comment (or PRD-track frontmatter edit).
 
 #### Step 9a — Parallel dispatch for independent issues
 
@@ -250,15 +275,16 @@ When multiple issues in a milestone have no cross-file overlap — derived from 
 
 #### Step 9b — CI green gate before merge
 
-`gh pr merge` only after the PR's required status checks are green. Command pattern (defense-in-depth — branch protection enforces the same gate at the API level when CI is red):
+Per `references/pr-branch-conventions.md` §7: all checks must be SUCCESS or NEUTRAL — including optional ones. SKIPPED is yellow, not green; surface and confirm before merge. Flaky checks get one re-run; second failure blocks merge.
 
 ```bash
-gh pr view <PR> --json statusCheckRollup -q '.statusCheckRollup[].conclusion' \
-  | grep -qv "SUCCESS" && echo "BLOCKED: CI not green" && exit 1
-gh pr merge <PR> --squash --delete-branch
+gh pr view <PR> --json statusCheckRollup \
+  -q '.statusCheckRollup[] | select(.conclusion != "SUCCESS" and .conclusion != "NEUTRAL") | .name'
+# expected: empty output. Any non-empty line blocks merge.
+gh pr merge <PR> <strategy-flag> --delete-branch      # strategy-flag = --squash | --rebase | --merge per §4
 ```
 
-If the repo does not enforce branch protection, the explicit check is the only gate — do not skip it. A merge on top of red CI is a regression vector and contradicts Step 10's preflight.
+PRD-track equivalent: run the project's documented test command (from `package.json` / `Cargo.toml` / `pyproject.toml` / `Makefile`); exit 0 = green. Do not merge without green on either track.
 
 ### Step 10 — Release when milestone closes
 
@@ -315,6 +341,32 @@ When the task context contains `tone=harsh` (from `/vibesubin harsh` or direct p
 - **Stale-snapshot warnings are refusals**: *"HEAD moved since the sweep report — re-run the sweep or proceed against the stale snapshot with explicit confirmation. Not proceeding silently."*
 
 Framing only. Evidence is identical to balanced mode — same issue count, same CI state, same manifest SHAs. Never inflate severity. Never invent issues. Never write issues the operator did not approve in Step 7.
+
+## Layperson mode — plain-language translation
+
+When the task context contains `explain=layperson` (from `/vibesubin explain`, `/vibesubin easy`, *"쉽게 설명해줘"*, *"일반인도 이해되게"*, *"explain like I'm non-technical"*, *"非開発者でも分かるように"*, *"用通俗的话解释"*), add a plain-language layer to every finding this skill emits. Combines freely with `tone=harsh`. Full rules at `/plugins/vibesubin/skills/vibesubin/references/layperson-translation.md`.
+
+### Three dimensions per finding
+
+Every finding gets three questions answered in plain language, in the operator's language (Korean / English / Japanese / Chinese):
+
+- **왜 이것을 해야 하나요? / Why should you do this?** — *"여러 수정을 '이거 다 고쳤으니 릴리즈' 한 마디로 묶으면 뭘 고쳤는지 한 달 뒤 본인도 모릅니다. 이슈 번호·PR·CHANGELOG·태그가 연결돼 있어야 다음 세션 AI가 맥락을 되찾아요."*
+- **왜 중요한 작업인가요? / Why is it an important task?** — *"릴리즈 사이클은 한 번 잘못 엮으면 이슈 누락·CHANGELOG 누락·태그 오설정으로 이어지고, 나중에 특정 버전에서 뭐가 바뀐 건지 추적 불가해집니다. 배포 프로세스 자체가 디버깅 대상이 됨."*
+- **그래서 무엇을 하나요? / So what gets done?** — *"intake → 이슈 draft → 밀스톤 클러스터 → 승인 → 생성 → 브랜치·PR → 병합 → CHANGELOG 집계 → 태그 → 릴리즈 노트 — 11단계를 하나씩 검증 게이트를 두고 돌립니다. GitHub이면 gh API로, 아니면 로컬 markdown 파일로 같은 방법론을 실행합니다."*
+
+### Severity translation
+
+- 🔴 blocker → *"지금 릴리즈 못 감 — 이슈가 열려 있거나 CI 빨간 상태"*
+- 🟡 cleanup → *"릴리즈는 되는데 감사 흔적 빠짐"*
+- 🟢 ready → *"태그 가능 — 모든 이슈 종료, CI green, CHANGELOG 기록"*
+
+### Box format
+
+Wrap each finding in the box format from the shared reference. Header uses urgency phrase and the finding number. Footer names the hand-off skill.
+
+### What does NOT change
+
+Findings, counts, file:line references, evidence, and severity are identical to balanced/harsh output. Only the wrapping and dimension annotations are added.
 
 ## Review modes — full and partial
 
@@ -390,8 +442,7 @@ Every response ends with the standard umbrella-compatible shape. Example stub:
 ## When not to use ship-cycle
 
 - Single-issue single-commit change: call the owning skill (`/refactor-verify`, `/audit-security`, `/write-for-ai`, etc.) directly. `ship-cycle` is for multi-item release cycles, not one-offs.
-- No intent to cut a version soon: if the operator just wants to log one item, `gh issue create` by hand is lighter than running this skill.
-- Non-GitHub host: the host check exits gracefully; invoke the underlying skills directly.
+- No intent to cut a version soon: if the operator just wants to log one item, `gh issue create` by hand (GitHub track) or an inline note (PRD track) is lighter than running this skill.
 - Operator is mid-refactor on a hot branch: finish the refactor with `refactor-verify`, come back to `ship-cycle` when the batch is ready.
 
 ## Integration with /vibesubin sweep
