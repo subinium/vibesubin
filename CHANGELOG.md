@@ -41,6 +41,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 - `plugins/vibesubin/skills/ship-cycle/SKILL.md` — hard-exit path on non-GitHub hosts. Replaced by fall-through to Step 1.5 (Track selection) with the PRD track as the fallback.
 
+### Security
+
+- `.gitignore` — explicit entries for `.mypy_cache/` and `.pytest_cache/` added under the Python-tooling section. Previously covered only by each tool's auto-generated internal `.gitignore` inside the cache directory; root-level explicit ignore prevents the cache from leaking if a user removes the internal file or if tool defaults change. Caches must never be tracked under any circumstance.
+
 ## [0.5.0] — 2026-04-22
 
 ### Added

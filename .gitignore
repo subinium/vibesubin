@@ -9,9 +9,11 @@ Thumbs.db
 *.swo
 *~
 
-# Python bytecode
+# Python bytecode + tooling caches
 __pycache__/
 *.py[cod]
+.mypy_cache/
+.pytest_cache/
 
 # Local scratch / env
 .env
