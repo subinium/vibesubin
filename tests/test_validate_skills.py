@@ -81,7 +81,6 @@ def _write_skill(
     """Create a SKILL.md plus any extra files under the skill directory."""
     skill_dir = root / "plugins" / plugin / "skills" / name
     skill_dir.mkdir(parents=True, exist_ok=True)
-    # Body always ends with a trailing newline so count_lines matches wc -l.
     if not body.endswith("\n"):
         body += "\n"
     (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
@@ -93,10 +92,14 @@ def _write_skill(
 
 
 # A minimal SKILL.md that passes every check when assets exist.
+# The skill name `good-skill` is not in any of the validator's category
+# sets, so it is treated as a generic non-sweep skill (mutates: [] is fine).
 GOOD_BODY = """\
 ---
 name: good-skill
 description: fixture skill
+mutates: []
+allowed-tools: Read
 ---
 
 # good-skill
@@ -117,6 +120,8 @@ EDITABLE_SWEEP_BODY = """\
 ---
 name: refactor-verify
 description: fixture clone
+mutates: [direct]
+allowed-tools: Read Edit
 ---
 
 # refactor-verify
@@ -132,6 +137,24 @@ Harsh bullet list.
 ## References
 
 - `references/patterns.md`
+"""
+
+# A pure-diagnosis sweep worker — must declare mutates: [].
+PURE_DIAGNOSIS_BODY = """\
+---
+name: fight-repo-rot
+description: fixture clone
+mutates: []
+allowed-tools: Read
+---
+
+# fight-repo-rot
+
+Pure diagnosis. No sweep marker mentioned anywhere.
+
+## Harsh mode — no hedging
+
+Harsh framing.
 """
 
 
@@ -180,10 +203,20 @@ def test_overflow_fails(
     tmp_path: Path,
     run_validator: Callable[[Path, bool], tuple[int, str]],
 ) -> None:
-    # 501 content lines + trailing newline = 501 lines per count_lines.
-    oversized = "\n".join(["## Harsh mode — no hedging"] + ["line"] * 500) + "\n"
+    # 8 lines of frontmatter + heading + blank + N "line" entries + trailing \n.
+    # Pick N so total newlines > 500. 600 produces ~608 total — well above cap.
+    body = (
+        "---\n"
+        "name: bloat-skill\n"
+        "description: bloat\n"
+        "mutates: []\n"
+        "allowed-tools: Read\n"
+        "---\n"
+        "\n"
+        "## Harsh mode — no hedging\n" + "\n".join(["line"] * 600) + "\n"
+    )
     _write_manifests(tmp_path)
-    _write_skill(tmp_path, "bloat-skill", body=oversized)
+    _write_skill(tmp_path, "bloat-skill", body=body)
     exit_code, output = run_validator(tmp_path, False)
     assert exit_code == 1
     assert "exceeds 500-line cap" in output
@@ -218,7 +251,16 @@ def test_harsh_mode_missing_fails(
     tmp_path: Path,
     run_validator: Callable[[Path, bool], tuple[int, str]],
 ) -> None:
-    body = "# title\n\nprose without the canonical heading\n"
+    body = (
+        "---\n"
+        "name: no-harsh\n"
+        "description: x\n"
+        "mutates: []\n"
+        "allowed-tools: Read\n"
+        "---\n"
+        "\n"
+        "# title\n\nprose without the canonical heading\n"
+    )
     _write_manifests(tmp_path)
     _write_skill(tmp_path, "no-harsh", body=body)
     exit_code, output = run_validator(tmp_path, False)
@@ -251,21 +293,8 @@ def test_sweep_marker_exempt_for_diagnosis(
     run_validator: Callable[[Path, bool], tuple[int, str]],
 ) -> None:
     # fight-repo-rot is pure-diagnosis — exempt from the sweep marker check.
-    body = """\
----
-name: fight-repo-rot
----
-
-# fight-repo-rot
-
-Pure diagnosis. No sweep marker mentioned anywhere.
-
-## Harsh mode — no hedging
-
-Harsh framing.
-"""
     _write_manifests(tmp_path)
-    _write_skill(tmp_path, "fight-repo-rot", body=body)
+    _write_skill(tmp_path, "fight-repo-rot", body=PURE_DIAGNOSIS_BODY)
     exit_code, output = run_validator(tmp_path, False)
     assert exit_code == 0, output
 
@@ -319,6 +348,212 @@ def test_verbose_emits_per_skill_summary(
     assert "sweep-marker=n/a" in output
     assert "asset-paths=1" in output
     assert "/500 lines" in output
+    assert "mutates=[]" in output
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.0 — frontmatter mutates contract
+# --------------------------------------------------------------------------- #
+
+
+def test_mutates_field_missing_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    body = GOOD_BODY.replace("mutates: []\n", "")
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "missing 'mutates' field" in output
+
+
+def test_mutates_invalid_token_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    body = GOOD_BODY.replace("mutates: []", "mutates: [bogus]")
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "invalid token" in output
+
+
+def test_mutates_external_in_sweep_specialist_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """Sweep specialists cannot mutate external systems — invariant #6."""
+    body = EDITABLE_SWEEP_BODY.replace(
+        "mutates: [direct]", "mutates: [direct, external]"
+    )
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "refactor-verify",
+        body=body,
+        extra_files={"references/patterns.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "cannot mutate external systems" in output
+
+
+def test_mutates_pure_diagnosis_must_be_empty(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """fight-repo-rot is pure-diagnosis; mutates must be []."""
+    body = PURE_DIAGNOSIS_BODY.replace("mutates: []", "mutates: [direct]")
+    _write_manifests(tmp_path)
+    _write_skill(tmp_path, "fight-repo-rot", body=body)
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "pure-diagnosis" in output
+
+
+def test_mutates_editable_worker_must_have_direct(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """refactor-verify edits in direct-call mode; mutates must include 'direct'."""
+    body = EDITABLE_SWEEP_BODY.replace("mutates: [direct]", "mutates: []")
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "refactor-verify",
+        body=body,
+        extra_files={"references/patterns.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "missing 'direct'" in output
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.0 — references file cap
+# --------------------------------------------------------------------------- #
+
+
+def test_oversized_references_file_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """References files >500 lines must fail."""
+    oversized = "\n".join(["line"] * 501) + "\n"
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=GOOD_BODY,
+        extra_files={"references/notes.md": oversized},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "exceeds 500-line cap" in output
+    assert "references/notes.md" in output
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.0 — skill-invocation cross-check
+# --------------------------------------------------------------------------- #
+
+
+def test_unknown_skill_invocation_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """Backtick `/some-skill` must reference a real skill."""
+    body = GOOD_BODY.replace(
+        "Some prose.",
+        "Hand off to `/refractor-verify` (typo of refactor-verify).",
+    )
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "/refractor-verify" in output
+
+
+def test_url_path_in_backticks_does_not_false_positive(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """Backtick `/pricing` is a URL example, not a skill — must not flag."""
+    body = GOOD_BODY.replace(
+        "Some prose.",
+        "Visit `/pricing` and `/docs` for examples.",
+    )
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 0, output
+
+
+# --------------------------------------------------------------------------- #
+# v0.7.0 — frontmatter required fields
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_description_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    body = GOOD_BODY.replace("description: fixture skill\n", "")
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "missing required field 'description'" in output
+
+
+def test_name_directory_mismatch_fails(
+    tmp_path: Path,
+    run_validator: Callable[[Path, bool], tuple[int, str]],
+) -> None:
+    """Frontmatter `name` must match directory name."""
+    body = GOOD_BODY.replace("name: good-skill", "name: wrong-name")
+    _write_manifests(tmp_path)
+    _write_skill(
+        tmp_path,
+        "good-skill",
+        body=body,
+        extra_files={"references/notes.md": "stub"},
+    )
+    exit_code, output = run_validator(tmp_path, False)
+    assert exit_code == 1
+    assert "does not match directory" in output
+
+
+# --------------------------------------------------------------------------- #
+# Smoke test against the shipping repo
+# --------------------------------------------------------------------------- #
 
 
 def test_real_repo_passes(

@@ -1,6 +1,7 @@
 ---
 name: setup-ci
 description: Teaches CI/CD from first principles to a non-developer, then scaffolds a working test + deploy pipeline. Handles the common hosts (GitHub Actions, GitLab CI, CircleCI, Travis, Jenkins) and common deploy targets (SSH to VM, Vercel, Netlify, Fly.io, Cloud Run, Docker registries). Asks what the operator has before generating anything — never assumes.
+mutates: [direct]
 when_to_use: Trigger on "set up CI", "auto deploy", "GitHub Actions", "I want to push and have it deploy", "what is CI", "how does deployment work", or when the operator wants any automated testing or deployment on a new or existing project.
 allowed-tools: Read Write Edit Glob Bash(ls .github/*) Bash(gh *) Bash(vercel *) Bash(fly *) Bash(netlify *) Bash(railway *) Bash(gcloud *) Bash(aws *) Bash(act *)
 ---

@@ -6,7 +6,7 @@ It's built for people who ship real things with AI but weren't trained as develo
 
 The same `SKILL.md` files work in **Claude Code**, **Codex CLI**, and **any agent supported by [skills.sh](https://skills.sh)** — Cursor, Copilot, Cline, and others. Write once; every host picks it up.
 
-> [한국어](./README.ko.md) · [中文](./README.zh.md) · [日本語](./README.ja.md)
+> [한국어](./docs/i18n/README.ko.md) · [中文](./docs/i18n/README.zh.md) · [日本語](./docs/i18n/README.ja.md)
 
 ---
 

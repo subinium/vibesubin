@@ -1,6 +1,7 @@
 ---
 name: codex-fix
 description: Post-edit loop that invokes `/codex:rescue` for a second-model review of the current branch, collects the findings, and hands them off to `refactor-verify`'s review-driven fix mode for triage, verification, and committed resolution. A thin host-specific wrapper — the portable review-driven engine lives in `refactor-verify`. Requires Claude Code with the Codex plugin installed; on every other host the skill emits a one-line fallback and exits without error. Operators whose review findings come from any other source (pasted notes, human PR review, Sentry alert, gitleaks output, Semgrep report, GitHub Advanced Security) should invoke `refactor-verify` directly and skip this wrapper entirely.
+mutates: [direct, external]
 when_to_use: Trigger on "codex 돌려서 고쳐줘", "codex로 한번 검사하고 수정", "codex fix", "codex driven fix", "rescue 돌리고 수정해줘", "run codex rescue and fix", "/codex-fix", typically at the end of a batch of edits and before a merge. For review-driven fixes from any other source (pasted findings, a PR review, a scanner report, Sentry), skip this wrapper and invoke `refactor-verify` directly with the findings — the engine is the same, only the input adapter differs.
 allowed-tools: Read Grep Glob Task Bash(git diff *) Bash(git log *) Bash(git status *) Bash(git rev-parse *) Bash(git merge-base *) Bash(git blame *) Bash(ls *) Bash(test *)
 ---

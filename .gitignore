@@ -31,6 +31,12 @@ scratch/
 .claude/
 .cursor/
 
+# AI session-rules — local maintainer copy only.
+# Project-wide rules live in MAINTENANCE.md, docs/PHILOSOPHY.md,
+# docs/ADDING-A-SKILL.md, and CONTRIBUTING.md (all tracked).
+CLAUDE.md
+AGENTS.md
+
 # secrets — keep ignored
 *.pem
 *.key

@@ -1,11 +1,11 @@
 # Adding a new skill to vibesubin
 
-This doc is canonical. If ADDING-A-SKILL.md and CLAUDE.md ever disagree on skill-authoring mechanics, CLAUDE.md wins on policy (what invariants exist) and this file wins on mechanics (what files and sections are needed). Both must stay in sync on category caps (10 + 1).
+This doc is canonical for skill-authoring mechanics. If this file and `MAINTENANCE.md` ever disagree, `MAINTENANCE.md` wins on operational policy (what invariants exist, what release process applies); this file wins on mechanics (what files and sections are needed). Both must stay in sync on category caps (10 + 1).
 
 ## Before you start
 
 Check the category cap:
-- 10 code-hygiene workers (all slots used — see `CLAUDE.md` never-do #2)
+- 10 code-hygiene workers (all slots used — see `MAINTENANCE.md` never-do #2)
 - 1 process worker (used — `ship-cycle`)
 
 A new worker requires extending, splitting, or displacing an existing skill. Adding an 11th code-hygiene or a 2nd process worker is a major-version decision — open an issue first.
@@ -31,9 +31,10 @@ plugins/vibesubin/skills/<skill-name>/
 ---
 name: <skill-name>               # must equal directory name
 description: <1-1024 chars>      # what the skill does, value prop first
+mutates: [<tokens>]              # subset of {direct, external}; [] for diagnosis-only
 when_to_use: <trigger phrases>   # include Korean, optionally Japanese + Chinese
-context: fork                    # worker skills only (omit for wrappers like codex-fix)
-agent: general-purpose           # worker skills only (omit for wrappers)
+context: fork                    # umbrella only (omit for workers + wrappers)
+agent: general-purpose           # umbrella only (omit for workers + wrappers)
 allowed-tools: <tool allow-list> # explicit; never widen without reason
 ---
 ```
@@ -41,6 +42,7 @@ allowed-tools: <tool allow-list> # explicit; never widen without reason
 Field rules:
 - `name`: 1–64 chars, matches directory
 - `description`: 1–1024 chars, non-empty, functional-tone (no marketing)
+- `mutates`: bracketed list of tokens drawn from `{direct, external}`. Sweep specialists cannot include `external` (sweep is read-only by invariant). Pure-diagnosis workers must declare `[]`. Editable sweep workers must include `direct`. Direct-call-only skills (`codex-fix`, `ship-cycle`) typically include both.
 - `when_to_use` + `description` combined ≤ 1,536 chars
 - `allowed-tools`: list each tool the skill actually uses; wildcard Bash(*) is discouraged
 
@@ -72,13 +74,16 @@ python3 scripts/validate_skills.py
 
 The validator enforces:
 - Every backtick-quoted path reference resolves on disk
-- Every SKILL.md ≤ 500 lines
+- Every SKILL.md ≤ 500 lines (same cap on each `references/*.md` file)
 - `## Harsh mode — no hedging` section present in every worker
 - `sweep=read-only` marker present in the 6 editable workers
 - `marketplace.json` version == `plugin.json` version
 - No path-traversal attempts in promised paths
+- Frontmatter declares `name`, `description`, `mutates`, and `allowed-tools` (or `context` + `agent` for the umbrella)
+- `mutates` tokens valid and consistent with skill category
+- Every `/<skill-name>` backtick reference resolves to a real skill
 
-If the validator fails, the skill does not ship.
+If the validator fails, the skill does not ship. Run `pytest tests/` alongside; both gates must be green.
 
 ## Output shape every worker must produce
 
@@ -98,21 +103,22 @@ If the validator fails, the skill does not ship.
 
 Umbrella synthesis depends on this shape.
 
-## Adding a worker: file checklist (per `CLAUDE.md` change-type matrix)
+## Adding a worker: file checklist (per `MAINTENANCE.md` change-type matrix)
 
 In a single PR:
 
-- [ ] New SKILL.md under `plugins/vibesubin/skills/<name>/` with frontmatter + required sections
+- [ ] New SKILL.md under `plugins/vibesubin/skills/<name>/` with frontmatter (incl. `mutates`) + required sections
 - [ ] Any `references/` sidecars the SKILL.md links to (otherwise validator fails)
 - [ ] `README.md` skill-table row + § section + workflow bullet (surgical edit only)
-- [ ] `README.ko.md` + `README.ja.md` + `README.zh.md` matching edits in natural voice
+- [ ] `docs/i18n/README.ko.md` + `docs/i18n/README.ja.md` + `docs/i18n/README.zh.md` matching edits in natural voice
 - [ ] Umbrella `plugins/vibesubin/skills/vibesubin/SKILL.md`:
   - Routing tree branch
   - Parallel launch block (if sweep-eligible)
   - "What ran" stoplight list (if sweep-eligible)
 - [ ] `CHANGELOG.md` `[Unreleased]` → `### Added` entry, functional-only
 - [ ] Both manifests bumped if count changed description
-- [ ] `python3 scripts/validate_skills.py` passes
+- [ ] `KNOWN_SKILLS` set in `scripts/validate_skills.py` updated (and category sets if applicable)
+- [ ] `python3 scripts/validate_skills.py && pytest tests/` passes
 - [ ] All 4 READMEs have the same skill-table row count
 
 ## Adding a wrapper (direct-call only, like codex-fix)

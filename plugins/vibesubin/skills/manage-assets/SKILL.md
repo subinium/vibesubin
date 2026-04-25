@@ -1,6 +1,7 @@
 ---
 name: manage-assets
 description: Finds oversized files, binary bloat, and accidental artifact commits in a repo — large files currently tracked, large blobs hiding in git history, LFS migration candidates, asset directories growing without a policy, duplicate binaries. Pure diagnosis — never edits, never deletes, never rewrites history. Hands off to manage-secrets-env if secrets are found inside blobs, to refactor-verify if history rewriting is required, to fight-repo-rot if assets are unused. Language-agnostic.
+mutates: []
 when_to_use: Trigger on "my repo is huge", "why is this repo so big", "large files", "binary bloat", "git clone is slow", "should I use LFS", "delete a big file from history", "repo size", "hundreds of MB of images", "DB file in git", or before open-sourcing a repo that might have accidentally committed artifacts.
 allowed-tools: Grep Glob Read Bash(git log *) Bash(git ls-files *) Bash(git rev-list *) Bash(git cat-file *) Bash(git verify-pack *) Bash(du *) Bash(find *) Bash(file *) Bash(wc *) Bash(sort *) Bash(awk *)
 ---
@@ -79,13 +80,14 @@ Thresholds the skill uses by default:
 | **> 10 MB** | 🟡 MEDIUM | Worth knowing about. Almost never source code; usually a binary artifact. |
 | **> 1 MB** | 🟢 LOW | Normal for images, lockfiles, some PDFs. Only flag if suspicious. |
 
-For every hit, classify by file type:
+For every hit, classify by file type. The classification field is a structured output the umbrella consumes — every finding from this skill carries one of: `artifact`, `source`, `media`, `database`, `secret-shaped`, `generated`.
 
-- **Source-like** (large JSON, large CSV, large SQL) — usually fine, but consider whether it belongs in LFS or a separate data repo.
-- **Binary artifacts** (`.zip`, `.tar.gz`, `.exe`, `.dmg`, `.dll`, `.so`, compiled `.a`, built `dist/`, `node_modules/`) — almost always a mistake. Flag with HIGH confidence.
-- **Media** (images, video, audio, PDFs, fonts) — may be intentional. Flag for LFS consideration if repeated or over 10 MB.
-- **Databases** (`.sqlite`, `.db`, `.mdb`, `.realm`) — almost never belong in git. Flag as CRITICAL regardless of size.
-- **Secrets-shaped** (`.pem`, `.key`, `.p12`, `id_rsa`, `*.credentials.json`) — incident. Hand off to `manage-secrets-env` immediately.
+- **`source`** — large JSON, large CSV, large SQL, large markdown. Usually fine, but consider LFS or a separate data repo.
+- **`artifact`** — `.zip`, `.tar.gz`, `.exe`, `.dmg`, `.dll`, `.so`, compiled `.a`, built `dist/`, `node_modules/`. Almost always a mistake. Flag HIGH confidence.
+- **`media`** — images, video, audio, PDFs, fonts. May be intentional. Flag for LFS if repeated or > 10 MB.
+- **`database`** — `.sqlite`, `.db`, `.mdb`, `.realm`. Almost never belong in git. Flag CRITICAL regardless of size.
+- **`secret-shaped`** — `.pem`, `.key`, `.p12`, `id_rsa`, `*.credentials.json`. Incident. Hand off to `manage-secrets-env` and `audit-security` immediately.
+- **`generated`** — files with `// @generated`, `# AUTO-GENERATED`, locked autogen output. Add to `.gitignore` and rebuild instead of tracking.
 
 ## Secondary category: large blobs in git history
 

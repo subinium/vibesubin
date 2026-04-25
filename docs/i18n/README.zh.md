@@ -6,7 +6,7 @@
 
 同一份 `SKILL.md` 可以在 **Claude Code**、**Codex CLI**,以及 **[skills.sh](https://skills.sh) 支持的任何 agent** 里直接用 —— Cursor、Copilot、Cline 等等。写一次,所有宿主都能识别。
 
-> [English](./README.md) · [한국어](./README.ko.md) · [日本語](./README.ja.md)
+> [English](../../README.md) · [한국어](./README.ko.md) · [日本語](./README.ja.md)
 
 ---
 

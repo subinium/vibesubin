@@ -1,6 +1,7 @@
 ---
 name: ship-cycle
-description: Issue-driven development orchestrator. Turns improvement intent into a well-specified, bilingual issue set; clusters issues into milestones that map 1:1 to semver versions; enforces branch, commit, and PR conventions (GitHub Flow — `<type>/<issue-N>-<slug>`, Conventional Commits, mandatory PR template, rebase-first merge); generates changelog entries and release notes deterministically from closed issues; leaves a durable audit trail for the next AI session. Direct-call only — not part of the /vibesubin parallel sweep. Two tracks — **GitHub track** (default) on GitHub with authenticated `gh` CLI; **PRD track** on any other host, using local markdown files under `docs/release-cycle/vX.Y.Z/` as the durable audit trail. Operator picks at Step 1.5.
+description: Issue-driven development orchestrator. Turns improvement intent into a well-specified, bilingual issue set; clusters issues into milestones that map 1:1 to semver versions; enforces branch, commit, and PR conventions (GitHub Flow — `<type>/<issue-N>-<slug>`, Conventional Commits, mandatory PR template, rebase-first merge); generates changelog entries and release notes deterministically from closed issues; leaves a durable audit trail for the next AI session. Direct-call only — not part of the /vibesubin parallel sweep. Two tracks — **GitHub track** (default) on GitHub with authenticated `gh` CLI; **PRD track** on any other host, using local markdown files under `docs/release-cycle/vX.Y.Z/` as the durable audit trail. Operator picks at Step 1.5. Every external mutation follows preview → confirm → mutate; created resources carry idempotency markers so re-runs noop instead of duplicating.
+mutates: [direct, external]
 when_to_use: Trigger on "plan a release", "릴리즈 계획", "cut a release", "릴리즈 하자", "이슈로 남기고 처리", "make issues for this", "bundle these findings into issues", "turn sweep findings into issues", "issue-driven", "이슈 드리븐", "roadmap for 0.N.0", "ship cycle", "tag and release", "release notes 써줘", "generate changelog from PRs", "여러 수정을 묶어서 릴리즈".
 allowed-tools: Read Grep Glob Task Bash(git status *) Bash(git log *) Bash(git diff *) Bash(git diff-index *) Bash(git branch *) Bash(git checkout *) Bash(git tag *) Bash(git push *) Bash(git rev-parse *) Bash(git merge-base *) Bash(gh issue *) Bash(gh pr *) Bash(gh release *) Bash(gh api *) Bash(gh repo *) Bash(gh auth *) Bash(ls *) Bash(test *) Bash(cat *) Bash(wc *)
 ---
@@ -70,6 +71,34 @@ Stop and ask when:
 - Current version can't be determined (no manifests, no tags) — operator must state a starting version.
 
 Never invent assumptions to keep moving. An invented default branch or an invented current version is worse than a blocked step.
+
+## Mutation contract — preview, confirm, mutate
+
+`ship-cycle` mutates external state (`gh issue create`, `gh api ... -X PATCH`, `gh release create`, `git tag -a`, `git push`). Every such call follows the same three-step contract:
+
+1. **Preview** — print the exact command and the rendered `BODY` content. No execution yet.
+2. **Confirm** — block on operator response. Accept `approve` / `proceed` / `yes` to advance; anything else (including silence) holds.
+3. **Mutate** — execute the command, capture its output (issue number, release URL, tag SHA), record the captured value in the audit trail.
+
+Created resources carry an idempotency marker so re-runs detect prior runs and noop instead of duplicating:
+
+- Issue bodies and release notes contain `<!-- ship-cycle:vX.Y.Z -->` near the top.
+- Branch names follow the deterministic shape `<type>/issue-<N>-<slug>` from `references/pr-branch-conventions.md` §1 — re-creating the same branch is a noop.
+- Milestone titles are `vX.Y.Z` exactly; reusing a title fetches the existing milestone instead of creating a duplicate.
+
+`dry-run` mode (operator says `dry-run` at Step 7 or sets it via Step 1.5 override) skips every Mutate step and prints the would-be commands. Useful for sanity-check before a real run.
+
+**Rollback.** Every external mutation has an inverse:
+
+| Mutation | Inverse |
+|---|---|
+| `gh issue create` | `gh issue close <N> --comment "rolled back — see <reason>"` |
+| `gh api repos/.../milestones` (create) | `gh api repos/.../milestones/<N> -X PATCH -f state=closed` |
+| `gh release create vX.Y.Z` | `gh release delete vX.Y.Z --yes` (only if not yet announced; otherwise cut a follow-up patch) |
+| `git tag -a vX.Y.Z` + push | `git push --delete origin vX.Y.Z` then `git tag -d vX.Y.Z` (rare; usually cut a follow-up patch instead) |
+| Branch + PR | `gh pr close <PR> --delete-branch` |
+
+Never rewrite a published tag or release. If a release shipped with a mistake, cut a patch (`vX.Y.Z+1`) and edit the broken release's notes only to add a *"Known issue — use vX.Y.Z+1"* banner.
 
 ## Procedure — 11 steps
 

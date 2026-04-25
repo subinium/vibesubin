@@ -1,6 +1,7 @@
 ---
 name: manage-secrets-env
 description: Opinionated defaults and full lifecycle playbook for secrets and environment variables. Decides where a secret or env-specific value lives (constant, .env, CI secret, env var), scaffolds .env.example and .gitignore, and manages the lifecycle end to end — add, update, rotate, remove, migrate between buckets, audit cross-environment drift, provision new environments. High-stakes companion to project-conventions. Language-agnostic.
+mutates: [direct]
 when_to_use: Trigger on "where should this secret go", ".env", "environment variable", "rotate this secret", "remove unused env var", "migrate to env var", "add staging environment", "check env drift", "audit secrets across environments", ".gitignore" (for secret-shaped entries), "secret management", or when onboarding a new project that needs a baseline secrets layout.
 allowed-tools: Read Write Edit Glob Grep Bash(grep *) Bash(git *) Bash(gh secret *) Bash(vercel env *) Bash(fly secrets *) Bash(netlify env *) Bash(railway variables *) Bash(gcloud *) Bash(aws *)
 ---

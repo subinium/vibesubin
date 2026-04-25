@@ -1,6 +1,7 @@
 ---
 name: audit-security
 description: Runs a deliberately small, hand-curated security sweep across a repo. Finds secrets committed to git, SQL/shell injection patterns, XSS sinks, path traversal, dangerous deserialization, missing cookie flags, wildcard CORS, and tracked credential files. Triages every finding as real / false-positive / needs-review before reporting. Language-agnostic, no heavyweight scanner required.
+mutates: []
 when_to_use: Trigger on "is this safe", "security check", "audit", "any vulnerabilities", "anything leaked", "is my .env exposed", "OWASP", before public releases or open-sourcing, after a major refactor, or when the operator mentions a data breach, incident, or scare.
 allowed-tools: Grep Glob Read Bash(git log *) Bash(git show *) Bash(git ls-files *) Bash(git grep *)
 ---
@@ -86,6 +87,8 @@ git ls-files | grep -iE '\.env$|\.env\.|\.pem$|id_rsa|id_ed25519|credentials|\.p
 ```
 
 Anything returned here is an immediate HIGH regardless of content.
+
+**Output rule for secret findings — fingerprint, never the raw value.** When reporting a hardcoded secret or a tracked secret file, never print the actual value. Print a fingerprint: file path, line number, value length, first 4 characters (or first 7 if it's a known prefix like `sk-`, `ghp_`, `xoxb-`), and a provider guess if the prefix is recognizable. Example: *"`src/config.ts:14` — token, length=51, prefix=`sk-pro` (OpenAI?). Rotate immediately."* The raw value is already in the operator's repo; printing it again into a chat log, a PR description, or a screenshot doubles the leak surface.
 
 ### 2. SQL injection
 

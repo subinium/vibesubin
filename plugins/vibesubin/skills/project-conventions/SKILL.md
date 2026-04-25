@@ -1,6 +1,7 @@
 ---
 name: project-conventions
-description: Opinionated defaults for the lower-stakes structural conventions every project has to pick — branch strategy, directory layout, dependency pinning, path portability. The companion to manage-secrets-env (which owns the high-stakes secrets/env slice). Picks GitHub Flow, enforces pinned dependencies, nudges toward domain-first directory structure, and audits for hardcoded absolute paths. Language-agnostic.
+description: Opinionated defaults for the lower-stakes structural conventions every project has to pick — branch strategy, directory layout, dependency pinning, path portability. The companion to manage-secrets-env (which owns the high-stakes secrets/env slice). Picks GitHub Flow, enforces pinned dependencies, nudges toward domain-first directory structure, and audits for hardcoded absolute paths. Adapts to repo type — app (exact pin + lockfile), library (semver range + compatibility matrix), monorepo (per-package). Language-agnostic.
+mutates: [direct]
 when_to_use: Trigger on "branch strategy", "main or dev", "GitHub Flow", "directory layout", "folder structure", "dependency version", "pin this", "Dependabot", "Renovate", "hardcoded path", "absolute path", "Windows path", "path portability", "lockfile", or when starting a new project that needs a baseline layout.
 allowed-tools: Read Write Edit Glob Grep Bash(grep *) Bash(git *) Bash(find *) Bash(ls *)
 ---
@@ -39,6 +40,20 @@ Stop-and-ask triggers:
 - Project is a monorepo with per-package pinning conventions — never apply a uniform rule without operator confirmation
 
 Silent picks are the most common failure mode: the skill runs, produces plausible output, and the operator doesn't notice the wrong interpretation was chosen. The Assumptions block is cheap insurance.
+
+## Repo type — app, library, or monorepo
+
+Pinning, branch strategy, and directory rules diverge by repo type. Detect once, surface in the Assumptions block, apply consistently.
+
+| Repo type | Detection signals | Pinning strategy |
+|---|---|---|
+| **app** (default) | `next.config.*`, `vite.config.*`, `Procfile`, `Dockerfile` at root, `package.json` with no `"main"`/`"exports"` fields | Exact pin every production dep + lockfile committed; CVE auditing in CI |
+| **library** | `package.json` with `"main"`/`"exports"`/`"types"`, `Cargo.toml` `[lib]`, `pyproject.toml` `[project]` with `name` matching publish target | Semver range for declared deps + lockfile committed *for tests only*; explicit compatibility matrix in CI (Node 18/20/22, Python 3.10/3.11/3.12, etc.) |
+| **monorepo** | `pnpm-workspace.yaml`, `lerna.json`, `nx.json`, `turbo.json`, `Cargo.toml` `[workspace]`, multiple `package.json` under `packages/` | Per-package strategy per the table above; shared lockfile at root |
+| **template** / **starter** | `.github/template-repo` marker, README declares "template", forks have diverged content | Exact pin + lockfile (downstream forks update at fork time) |
+| **docs-only** | No source code, only `.md`/`.mdx` and config | No production deps — only `devDependencies` (linters, doc tooling) |
+
+App-style pinning on a library leaks the dep range to every downstream consumer; library-style ranges on an app produce silent floating versions. Catch the mismatch in the audit.
 
 ## Dependency versioning — pin or bleed
 

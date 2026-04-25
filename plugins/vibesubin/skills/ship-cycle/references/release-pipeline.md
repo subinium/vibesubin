@@ -2,7 +2,7 @@
 
 Step-by-step checklist for closing a milestone and cutting a tagged release. Run this once every issue in the milestone is closed and CI is green on the default branch.
 
-This file is the operational expansion of the release process declared in the root `CLAUDE.md`. The root `CLAUDE.md` owns the policy (what must be true at each phase); this file owns the commands (how to verify each phase, including validator preflight, CI wait loops, manifest detection across language ecosystems, and rollback decisions). If they drift, the root `CLAUDE.md` wins on policy; this file wins on commands. Both must stay in sync on the ordering of steps.
+This file is the operational expansion of the release process declared in `MAINTENANCE.md`. `MAINTENANCE.md` owns the policy (what must be true at each phase); this file owns the commands (how to verify each phase, including validator preflight, CI wait loops, manifest detection across language ecosystems, and rollback decisions). If they drift, `MAINTENANCE.md` wins on policy; this file wins on commands. Both must stay in sync on the ordering of steps.
 
 ## Preflight
 
@@ -82,7 +82,7 @@ Move the aggregated entries under a new `[X.Y.Z] — YYYY-MM-DD` heading in `CHA
 | Claude Code plugin | `.claude-plugin/marketplace.json` (`plugins[0].version`) AND `plugins/<name>/.claude-plugin/plugin.json` (`version`) — both files, same commit |
 | Go module | git tag is authoritative, no file bump needed |
 
-For the vibesubin pack specifically, both `marketplace.json` and `plugin.json` must change together — invariant in root `CLAUDE.md`.
+For the vibesubin pack specifically, both `marketplace.json` and `plugin.json` must change together — invariant in `MAINTENANCE.md`.
 
 **3. Run the project's validator and test suite.**
 

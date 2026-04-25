@@ -47,10 +47,10 @@ Every doc that must update in the same PR as this issue's resolution. No follow-
 
 | File | What changes |
 |---|---|
-| `CHANGELOG.md` | `### Added` / `### Changed` / `### Fixed` / `### Security` / `### Removed` bullet under `[Unreleased]`. Functional-only style per `CLAUDE.md` always-do #2. |
-| `README.md` / `README.ko.md` / `README.ja.md` / `README.zh.md` | Skill-table row, workflow bullet, § section — whichever applies. Surgical edits per `CLAUDE.md` never-do #1. All four in the same PR. |
+| `CHANGELOG.md` | `### Added` / `### Changed` / `### Fixed` / `### Security` / `### Removed` bullet under `[Unreleased]`. Functional-only style per `MAINTENANCE.md` always-do #3. |
+| `README.md` / `docs/i18n/README.ko.md` / `docs/i18n/README.ja.md` / `docs/i18n/README.zh.md` | Skill-table row, workflow bullet, § section — whichever applies. Surgical edits per `MAINTENANCE.md` never-do #1. All four in the same PR. |
 | `plugins/vibesubin/skills/<skill>/SKILL.md` | Skill-file edits, with validator passing. |
-| `CLAUDE.md` | Change-type matrix row, load-bearing invariant update, Recently-decided entry — whichever applies. |
+| `MAINTENANCE.md` | Change-type matrix row, load-bearing invariant update, Recently-decided entry — whichever applies. |
 | `docs/PHILOSOPHY.md` | Invariant addition/amendment — only for major-version scope changes. |
 
 Fill in for this issue:

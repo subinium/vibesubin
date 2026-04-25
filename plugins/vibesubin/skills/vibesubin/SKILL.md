@@ -1,6 +1,7 @@
 ---
 name: vibesubin
 description: The vibesubin command and vibe. Runs every code-hygiene specialist in the plugin across a repository in parallel and synthesizes their findings into a single prioritized report. Process skills like `/ship-cycle` and host-specific wrappers like `/codex-fix` are direct-call only and not part of the sweep. Invoke by name (/vibesubin) for a full sweep, or let it route a vague request to the right sub-skill when the operator isn't sure where to start. Read-only by default; fixes apply only after the operator approves items from the report. Two optional output modifiers — `tone=harsh` for direct, no-hedging framing, and `explain=layperson` for plain-language translation (3-dimension box format with "왜 해야 / 왜 중요 / 무엇을 할지" per finding); the two combine. When two specialists give contradictory advice on the same file, the umbrella emits a skill-conflict block (gap / reason / basis per side) instead of silently picking one.
+mutates: []
 when_to_use: Trigger on "/vibesubin", "use vibesubin", "run vibesubin on this repo", "full check", "audit my repo", "where do I start", "is my repo okay", "my repo is a mess", "vibe check", or when the operator's request is vague enough that routing to a single specialist isn't obvious.
 context: fork
 agent: general-purpose
@@ -159,6 +160,8 @@ Run all nine sub-skills as **parallel task agents** (or parallel subagents, depe
 **Read-only mode is enforced by the launch instruction itself.** Every specialist task MUST begin with the exact token `sweep=read-only` followed by "produce findings only, do not edit any files, do not run lifecycle workflows." Each specialist has a matching "Sweep mode — read-only audit" section in its SKILL.md that checks for this marker and switches to audit-only output. If a specialist does not see the marker, it will default to its full edit-capable behavior, which is incorrect for a sweep.
 
 Three specialists (`fight-repo-rot`, `audit-security`, `manage-assets`) are pure-diagnosis by default and edit nothing regardless of the marker. The other six (`refactor-verify`, `setup-ci`, `write-for-ai`, `manage-secrets-env`, `project-conventions`, `unify-design`) rely on this marker to stay read-only. Do not launch any of them without it.
+
+**Sweep contract enforcement (frontmatter check).** Before adding a worker to the parallel launch block, read the worker's `SKILL.md` frontmatter `mutates` field. If `external` appears in the list, the worker is direct-call only and **must not** participate in the sweep — refuse and skip silently. Today this excludes `codex-fix` and `ship-cycle`. The check is cheap (one read of frontmatter), and protects the sweep's read-only invariant from a future worker that violates it without updating this launch block. `validate_skills.py` also enforces this contract, but the umbrella reads it at runtime so the protection holds even on hosts without the validator wired in.
 
 Parallel launch targets (the `sweep=read-only` prefix is mandatory — copy it into every task description verbatim):
 

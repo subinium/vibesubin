@@ -1,6 +1,7 @@
 ---
 name: unify-design
 description: Establishes a web project's design system as the single source of truth — colors, spacing, typography, radius, shadow, breakpoints — then audits the codebase for drift against it (hardcoded hex values, arbitrary Tailwind values, magic px/rem numbers, duplicate component variants, inconsistent navigation) and fixes the drift by extracting repeated values to design tokens. Framework-aware — Tailwind (v3 and v4), CSS Modules, styled-components / Emotion, Material UI, Chakra UI, vanilla CSS with custom properties. Multi-file rewrites hand off to refactor-verify.
+mutates: [direct]
 when_to_use: Trigger on "make this match the design system", "unify the buttons", "extract these colors to tokens", "why do these two pages look different", "too many hardcoded values", "design drift", "브랜드 일관성", "디자인 통일해줘", "토큰으로 뽑아줘", "デザインを統一", "設計システム", "设计系统", "品牌一致性", before a public launch, after porting from a template, or when a project's spacing and colors visibly drift across pages.
 allowed-tools: Read Write Edit Glob Grep Bash(grep *) Bash(git grep *) Bash(git log *) Bash(npm *) Bash(pnpm *) Bash(yarn *) Bash(bun *) Bash(npx *) Bash(stylelint *) Bash(eslint *)
 ---

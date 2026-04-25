@@ -1,6 +1,7 @@
 ---
 name: write-for-ai
 description: Writes documentation, commit messages, and PR descriptions optimized for the NEXT AI session to understand the project cold. Templates for README, CLAUDE.md / AGENTS.md, conventional commits, and PR bodies. Prioritizes tables and checklists over prose, absolute file paths over vague references, invariants over narrative.
+mutates: [direct]
 when_to_use: Trigger on "write README", "document this", "commit message", "PR description", "CLAUDE.md", "AGENTS.md", "write for AI", or when preparing docs for the next session (human or AI) to pick up cold.
 allowed-tools: Read Write Edit Grep Glob Bash(git log *) Bash(git diff *) Bash(npm test *) Bash(pnpm test *) Bash(pytest *) Bash(go test *) Bash(cargo test *)
 ---
