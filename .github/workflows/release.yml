@@ -46,8 +46,16 @@ jobs:
             exit 1
           fi
 
-      - name: Create GitHub release
+      - name: Create draft GitHub release
+        # Draft: true so the human can paste functional-only notes per
+        # CLAUDE.md step 8 before publishing. CI is the validation safety
+        # net; the human still owns the release notes.
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           generate_release_notes: true
           name: "vibesubin ${{ github.ref_name }}"
+          body: |
+            Draft created by CI. Replace this body with the curated
+            functional-only release notes (per CLAUDE.md step 8) before
+            publishing. The auto-generated changelog above is for reference.

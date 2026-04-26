@@ -57,18 +57,18 @@ if [ "$EDITS" -lt 5 ]; then
     fi
 fi
 
-# Run the bundled symbol-diff with a hard 3s cap.
-SCRIPT="${CLAUDE_PLUGIN_ROOT}/skills/refactor-verify/scripts/symbol-diff.sh"
-if [ ! -x "$SCRIPT" ]; then
-    # Plugin not fully installed — silently skip.
-    exit 0
-fi
-
-REPO_DIR=$(cd "$(dirname "$FILE")" && git rev-parse --show-toplevel 2>/dev/null || dirname "$FILE")
+# Advisory only — emit a stderr nudge to run /vibesubin:refactor-verify.
+#
+# Why we don't run symbol-diff inline:
+#   symbol-diff.sh compares two git refs (e.g., HEAD~1 vs HEAD), which
+#   requires a meaningful "before" snapshot. At PostToolUse time the edit
+#   is in the working tree, not committed — there is no reliable ref to
+#   diff against. /vibesubin:refactor-verify takes a proper snapshot at
+#   the start of its session and runs the full 4-check verification then.
+#   The hook's job is just to notice the pattern and remind.
 {
-    echo "vibesubin auto-verify: $TOOL on $(basename "$FILE") (edits=$EDITS)"
-    ( cd "$REPO_DIR" && timeout 3 "$SCRIPT" HEAD HEAD 2>&1 ) || true
-    echo "→ run /vibesubin:refactor-verify for the full 4-check verification"
+    echo "vibesubin auto-verify: $TOOL on $(basename "$FILE") (edits=$EDITS, signature-changing)"
+    echo "→ run /vibesubin:refactor-verify to verify nothing was dropped or moved"
 } >&2
 
 # PostToolUse: exit code is observability-only; always succeed.
