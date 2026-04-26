@@ -4,6 +4,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+### Added
+
+- `plugins/vibesubin/hooks/auto-verify.sh` + `hooks/hooks.json` — opt-in PostToolUse hook (`VIBESUBIN_AUTO_VERIFY=1`) that runs `refactor-verify`'s `symbol-diff.sh` after MultiEdit ≥5 edits OR diffs containing signature lines (`export`/`def`/`class`/`pub fn`/`func`/`fn`/`async function`/`interface`/`type`). Defaults OFF — no behavior change for existing installs. Stderr-advisory only (PostToolUse cannot block; exit 0 fixed). Hard 3-second timeout on the symbol-diff. Extends `refactor-verify` per invariant #2 — no new skill, no cap impact.
+- `.github/workflows/release.yml` — tag-push (`v*.*.*`) workflow runs `validate_skills.py`, `pytest`, manifest version sync check (HARD: tag = marketplace = plugin), and forbidden-file check (`git ls-files | grep -iE '\.env$|\.pem$|id_rsa|\.key$'`) before creating the GitHub release. The manual `gh release create` policy in `CLAUDE.md` step 9 still works; this CI is the safety net for tagged releases.
+- `.claude-plugin/marketplace.json` plugin entry — `category: "developer-tools"`, `tags: ["claude-code", "skills", "code-quality", "refactor-verification", "security-audit", "ci-cd", "ai-friendly"]`, `repository`. Fields the plugin schema supports for marketplace discoverability that were previously absent.
+
+### Changed
+
+- `install.sh` — replaced `❌` emoji prefix with `ERROR:` text in the 3 error paths (lines 40, 54, 129). Avoids broken rendering on non-UTF-8 terminals; aligns with the pack's no-emoji ethos.
+
 ## [0.7.0] — 2026-04-25
 
 ### Added
