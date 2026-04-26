@@ -33,6 +33,7 @@ except Exception:
 TOOL=$(printf '%s' "$PARSED" | cut -f1)
 FILE=$(printf '%s' "$PARSED" | cut -f2)
 EDITS=$(printf '%s' "$PARSED" | cut -f3)
+EDITS="${EDITS:-0}"  # Defensive: ensure numeric for the -lt comparison below.
 
 # Need a file path to do anything useful.
 [ -z "$FILE" ] && exit 0

@@ -11,13 +11,12 @@
       "description": "A caring skill pack for vibe coders — portable engineering discipline (refactor verification, security, repo rot, AI-friendly docs, CI, secrets lifecycle, project conventions, repo bloat, design unification) encoded as agent skills, plus two direct-call helpers: an optional Claude Code + Codex wrapper for post-edit review loops, and an issue-driven release-cycle orchestrator for planning and shipping versions.",
       "version": "0.7.0",
       "homepage": "https://github.com/subinium/vibesubin",
-      "repository": "https://github.com/subinium/vibesubin",
       "license": "MIT",
       "category": "developer-tools",
-      "tags": [
+      "keywords": [
         "claude-code",
-        "skills",
-        "code-quality",
+        "skill-pack",
+        "vibe-coding",
         "refactor-verification",
         "security-audit",
         "ci-cd",
