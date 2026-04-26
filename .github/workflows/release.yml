@@ -1,0 +1,53 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Validate skills
+        run: python3 scripts/validate_skills.py
+
+      - name: Run tests
+        run: pytest tests/ -q
+
+      - name: Verify manifest version sync (HARD)
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          MARKETPLACE_VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          PLUGIN_VERSION=$(jq -r '.version' plugins/vibesubin/.claude-plugin/plugin.json)
+          echo "tag=$TAG_VERSION marketplace=$MARKETPLACE_VERSION plugin=$PLUGIN_VERSION"
+          if [ "$TAG_VERSION" != "$MARKETPLACE_VERSION" ] || [ "$TAG_VERSION" != "$PLUGIN_VERSION" ]; then
+            echo "::error::Version mismatch — tag=$TAG_VERSION marketplace=$MARKETPLACE_VERSION plugin=$PLUGIN_VERSION"
+            exit 1
+          fi
+
+      - name: Verify no committed secrets
+        run: |
+          if git ls-files | grep -iE '\.env$|\.pem$|id_rsa|\.key$' ; then
+            echo "::error::Forbidden file types committed"
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          name: "vibesubin ${{ github.ref_name }}"
