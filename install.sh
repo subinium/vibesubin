@@ -37,7 +37,7 @@ while [ $# -gt 0 ]; do
             shift
             TARGET="${1:-}"
             if [ -z "${TARGET}" ]; then
-                echo "❌ --to requires an argument: claude | codex | all" >&2
+                echo "ERROR:--to requires an argument: claude | codex | all" >&2
                 exit 1
             fi
             ;;
@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -d "${SKILLS_SRC}" ]; then
-    echo "❌ ${SKILLS_SRC} does not exist. Are you running from the repo root?"
+    echo "ERROR:${SKILLS_SRC} does not exist. Are you running from the repo root?"
     exit 1
 fi
 
@@ -126,7 +126,7 @@ case "${TARGET}" in
         install_to "${HOME}/.codex/skills" "Codex CLI"
         ;;
     *)
-        echo "❌ --to must be one of: claude, codex, all" >&2
+        echo "ERROR:--to must be one of: claude, codex, all" >&2
         exit 1
         ;;
 esac
