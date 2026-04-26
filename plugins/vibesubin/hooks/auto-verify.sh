@@ -68,7 +68,7 @@ fi
 #   the start of its session and runs the full 4-check verification then.
 #   The hook's job is just to notice the pattern and remind.
 {
-    echo "vibesubin auto-verify: $TOOL on $(basename "$FILE") (edits=$EDITS, signature-changing)"
+    echo "vibesubin auto-verify: $TOOL on $(basename "$FILE") (edits=$EDITS)"
     echo "→ run /vibesubin:refactor-verify to verify nothing was dropped or moved"
 } >&2
 
