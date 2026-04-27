@@ -316,6 +316,7 @@ Manual dispatch is for **a reviewed re-deploy** or first-run proof. Make the gen
 - **Don't auto-deploy to production from the first run.** Require `workflow_dispatch` manually for the first run, then switch to `workflow_run` for subsequent automated runs
 - **Don't leave framework mismatch in place.** A Python workflow in a pnpm repo is not a starting point, it's a bug. Detect the repo and emit the right commands the first time.
 - **Don't scaffold workflows the operator didn't ask for.** If they asked for `test.yml`, do not also drop in `deploy.yml`, `release.yml`, or `codeql.yml` because they "looked useful". Adjacent needs (Dependabot, Renovate, CodeQL) go in the output as hand-off suggestions — a single extra workflow can leak credentials or trigger unwanted billing on the first push.
+- **Don't scaffold gate-bypass mechanisms into generated workflows.** Forbidden in emitted YAML: `continue-on-error: true` on a quality gate (lint / typecheck / test / audit), `if: false`-skipped jobs that look real, allowed_failures lists for required checks, conditional skips on commit-message tokens (`[skip-ci]` exceptions for the full quality gate), `--no-verify` flags in scripted steps. The pipeline's value is in failing loudly on regressions; bypass mechanisms are a regression dressed as flexibility. If the operator wants a soft check, scaffold it as a separate non-required job — never weaken a required one.
 
 ## Common failure modes
 

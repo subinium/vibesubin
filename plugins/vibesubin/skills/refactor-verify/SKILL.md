@@ -330,6 +330,8 @@ A change on top of red is indistinguishable from a change that caused red. You l
 ## Things not to do
 
 - **Don't add features the operator did not request.** During a move/rename/split, if you notice a bug in an adjacent function, a test that could be tighter, or a comment that's wrong, report it in the final output as a hand-off — do not fix it as part of this change. Every edited line must trace to the named change type; unrelated fixes contaminate the AST-diff verification and invite silent regressions.
+- **Don't silently drop code that looks unused during a move/rename/split.** If the refactor surfaces a function/class/type with no apparent callers, the verified path is: (1) confirm zero refs via LSP + grep, (2) check `git log` for the most recent intentional change to it, (3) preserve it in the moved location and flag for separate review — not delete as part of the refactor. Bundling deletion with relocation contaminates the AST-diff verification and removes context the operator needs to make the deletion decision.
+- **Don't recommend gate-gaming as a fix when post-refactor verification fails.** Forbidden as a "fix": `as any` to make `tsc --noEmit` pass, `// @ts-ignore` / `# type: ignore`, `eslint-disable` without justification, weakening test assertions, `.skip`/`xit` on a test that broke from the refactor, expanding tsconfig excludes to dodge type errors, empty `try/catch` to silence runtime errors. The 6-step procedure measures refactor correctness; weakening the gates is a regression dressed as a fix. If a check fails, repair the underlying code or revert the refactor — never weaken the check.
 
 ## Sweep mode — read-only audit
 

@@ -125,6 +125,7 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 - Don't touch `.env`, `.gitignore`, or any secret-shaped file. Those are `manage-secrets-env`'s responsibility.
 - Don't lecture about `git-flow` vs GitHub Flow vs trunk-based development. Pick GitHub Flow, state the reason in one sentence, move on.
 - **Don't impose conventions the operator didn't ask for.** If they asked about branch strategy, don't unilaterally switch their Dependabot cadence or re-layout their `src/` tree because "while you're here". Adjacent convention drift goes in the output as hand-off suggestions — conventions are opinions, and silent imposition is how this skill loses trust fastest.
+- **Don't propose a convention change without identifying why the existing one was set.** Run `git log` on the file (`CONTRIBUTING.md`, `package.json`, `tsconfig.json`, `eslint.config.*`, `.github/`) and check `docs/` for ADRs before recommending a switch — the "don't silently change" rule above asks for confirmation, this asks for *understanding* first. If origin is unclear, mark the proposal `candidate-with-context-needed`; recommending convention changes without context is how working setups get accidentally regressed.
 
 ## Sweep mode — read-only audit
 

@@ -292,6 +292,7 @@ The bias is **high-leverage + low-risk first**. Dead code HIGH is usually the cl
 - **Don't recommend fixes without evidence.** Every finding must cite the metric or signal that triggered it — a grep count, a commit count, a file size, an LSP reference count.
 - **Don't scope-creep into planning.** "Here's what's wrong" is the deliverable. "Here's the fix plan" belongs in the hand-off skill.
 - **Don't expand the diagnosis scope beyond what was asked.** This skill never edits; the scope-creep risk is in findings. If the operator asked for dead-code diagnosis in `src/api/`, don't hand back an all-repo tree of god-files and hotspots. Adjacent findings go in a short "things I'd look at next" footer — not the main report.
+- **Don't flag code or files as removable without identifying their origin.** A `grep` returning zero references is a starting signal, not a verdict. Before tagging a finding `verified`, run `git log -- <path>` for the introduction commit and check recent issues/PRs for the *why*. Confidence tier `verified` requires both: zero refs AND known origin. If origin is unclear, downgrade to `candidate` and surface to the operator — diagnosing "dead" without context is the leading cause of recommending removal of code that turns out to be load-bearing.
 
 ## Harsh mode — no hedging
 

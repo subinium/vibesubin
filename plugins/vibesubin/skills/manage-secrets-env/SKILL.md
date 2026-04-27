@@ -258,6 +258,7 @@ Don't dump the entire skill. Answer the specific question in one paragraph and o
 - Don't store secrets in `.env.example`. That file is committable; real secrets go in `.env`.
 - Don't touch non-secret conventions (branches, directory layout, dep pinning). Those live in `project-conventions`.
 - **Don't add features the operator did not request.** If they asked to rotate one secret, don't also scaffold `.env.example` as a bonus, and don't add startup-validation to an app that didn't request it. Adjacent lifecycle gaps (`.env.example` missing, no startup validation, `.gitignore` incomplete) go in the final output as hand-off suggestions — each one is a decision the operator needs to make explicitly.
+- **Don't recommend env var removal without proving it has no readers.** Run `grep -rE 'process\.env\.<NAME>|os\.environ.*<NAME>|ENV\["<NAME>"\]' .` across source code, *and* check deployment configs (`vercel.json`, `Dockerfile`, k8s manifests, helm values, CI workflow files). An env var unreferenced in code may still be consumed by a runtime sidecar, build step, or platform-injected feature. If reader detection is incomplete, surface as a `candidate-for-removal` with the surfaces you checked — never as a verified-unused.
 
 ## Sweep mode — read-only audit
 

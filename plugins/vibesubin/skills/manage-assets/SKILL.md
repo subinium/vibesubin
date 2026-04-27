@@ -228,6 +228,7 @@ Pure diagnosis. No files deleted, no history rewritten, no LFS migration run. Ap
 - **Don't confuse large with dead.** A file being big does not mean it's unused. A big asset might be actively referenced by the build. For "is this used" questions, that's `fight-repo-rot`.
 - **Don't assume LFS is always the answer.** LFS costs money on most hosts and has its own operational overhead. Small teams with occasional large files often do fine with "just don't commit it." Recommend LFS only when the pattern is recurring.
 - **Don't expand the diagnosis scope beyond what was asked.** This skill never edits; the scope-creep risk is in findings. If the operator asked about a specific large directory, don't hand back an all-repo blob scan with LFS recommendations for every binary. Adjacent findings go in a short "also worth looking at" footer — not the main bloat report.
+- **Don't recommend asset removal without proving it's truly unused.** A `grep` for the filename in source files is a starting signal, not a verdict. Assets are commonly referenced indirectly — CSS `url()`, dynamic imports, runtime JSON manifests, build configs, CDN URLs in env vars, image-source-set strings, sprite sheets. Before flagging an asset for removal, broaden the scan to `.css`, `.scss`, `.html`, `.json`, and CI/build configs. If indirect usage is plausible and unverified, mark as `candidate-for-removal` with the surfaces you checked — never as `verified-unused`.
 
 ## Sweep mode — read-only audit
 

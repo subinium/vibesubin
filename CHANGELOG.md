@@ -4,11 +4,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-04-27
+
 ### Added
 
 - `plugins/vibesubin/hooks/auto-verify.sh` + `hooks/hooks.json` — opt-in PostToolUse hook (`VIBESUBIN_AUTO_VERIFY=1`) that runs `refactor-verify`'s `symbol-diff.sh` after MultiEdit ≥5 edits OR diffs containing signature lines (`export`/`def`/`class`/`pub fn`/`func`/`fn`/`async function`/`interface`/`type`). Defaults OFF — no behavior change for existing installs. Stderr-advisory only (PostToolUse cannot block; exit 0 fixed). Hard 3-second timeout on the symbol-diff. Extends `refactor-verify` per invariant #2 — no new skill, no cap impact.
 - `.github/workflows/release.yml` — tag-push (`v*.*.*`) workflow runs `validate_skills.py`, `pytest`, manifest version sync check (HARD: tag = marketplace = plugin), and forbidden-file check (`git ls-files | grep -iE '\.env$|\.pem$|id_rsa|\.key$'`) before creating the GitHub release. The manual `gh release create` policy in `CLAUDE.md` step 9 still works; this CI is the safety net for tagged releases.
 - `.claude-plugin/marketplace.json` plugin entry — `category: "developer-tools"`, `tags: ["claude-code", "skills", "code-quality", "refactor-verification", "security-audit", "ci-cd", "ai-friendly"]`, `repository`. Fields the plugin schema supports for marketplace discoverability that were previously absent.
+- Workers now refuse to recommend removal or replacement of unfamiliar code, files, env vars, assets, or conventions without first identifying the *why* (origin commit, recent issues/PRs, indirect references, ADRs) — Chesterton's Fence internalized in `fight-repo-rot`, `manage-assets`, `manage-secrets-env`, `refactor-verify`, `audit-security`, `project-conventions`. Confidence tier `verified` requires both zero refs AND known origin; unclear origin downgrades to `candidate-for-removal` (or `candidate-with-context-needed` for convention changes) with operator confirmation. Operationalizes invariants #2 (*Your AI is a well-meaning junior developer* — inserts *stop and ask* moments before destructive action) and #1 (*Done is proven, not claimed* — proof of origin required for the `verified` tier). Per-skill bullets in each affected `Things not to do` section carry the rule, not the principle name (Karpathy precedent — no external shoutout in `SKILL.md`).
+- Workers now refuse to recommend gate-gaming patterns (`as any`, `// @ts-ignore` / `# type: ignore`, `eslint-disable` without justification, weakened test assertions, `.skip` / `xit`, empty `try/catch`, expanded tsconfig excludes, `continue-on-error: true` on quality gates, `.semgrepignore` / `# nosec` / `// trivy:ignore` without CVE/justification) as fixes when verification fails — Goodhart's Law internalized in `refactor-verify`, `audit-security`, `setup-ci`, `codex-fix`. The pipeline measures correctness; gate-bypass mechanisms are a regression dressed as a fix. Operationalizes invariant #1 (*Done is proven, not claimed*) for the verification path specifically.
 
 ### Changed
 
