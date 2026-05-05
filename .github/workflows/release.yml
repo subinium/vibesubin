@@ -43,10 +43,20 @@ jobs:
         # Pattern set mirrors manage-secrets-env's secret-shaped entries
         # (.env / .env.* / *.pem / *.key / id_rsa* / id_ed25519* /
         # credentials* / secrets* / *.p12 / *.pfx / *.credentials.json).
-        # Narrower regex would let SSH/PFX/JSON keys slip past CI.
+        # Each alternation anchors to a path-component boundary — (^|/)
+        # prefix and $ / [^/]*$ suffix — so words inside a directory name
+        # ('manage-secrets-env') do not false-positive. Documentation
+        # extensions (.md / .template / .example) are always excluded:
+        # those are the per-skill reference and template files that
+        # describe the rule, not actual secret files.
         run: |
-          if git ls-files -z | grep -ziE '(^|/)(\.env(\..*)?$|.*\.pem$|.*\.key$|id_rsa.*|id_ed25519.*|.*\.p12$|.*\.pfx$|.*credentials.*|.*secrets.*|.*\.credentials\.json$)' ; then
-            echo "::error::Forbidden file types committed (secret-shaped)"
+          matches=$(git ls-files \
+            | grep -iE '(^|/)(\.env(\..*)?$|[^/]*\.pem$|[^/]*\.key$|id_rsa[^/]*$|id_ed25519[^/]*$|[^/]*\.p12$|[^/]*\.pfx$|credentials[^/]*$|secrets[^/]*$|[^/]*\.credentials\.json$)' \
+            | grep -vE '\.(md|template|example)(\..+)?$' \
+            || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Forbidden file types committed (secret-shaped):"
+            printf '%s\n' "$matches"
             exit 1
           fi
 
