@@ -5,13 +5,23 @@ on:
     branches: [main]
     paths:
       - 'plugins/**'
-      - 'scripts/validate_skills.py'
-      - '.github/workflows/validate-skills.yml'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.claude-plugin/**'
+      - '.github/workflows/**'
+      - 'MAINTENANCE.md'
+      - 'README.md'
+      - 'docs/i18n/**'
   pull_request:
     paths:
       - 'plugins/**'
-      - 'scripts/validate_skills.py'
-      - '.github/workflows/validate-skills.yml'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.claude-plugin/**'
+      - '.github/workflows/**'
+      - 'MAINTENANCE.md'
+      - 'README.md'
+      - 'docs/i18n/**'
   workflow_dispatch:
 
 permissions:

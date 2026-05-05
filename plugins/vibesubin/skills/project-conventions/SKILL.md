@@ -59,7 +59,13 @@ App-style pinning on a library leaks the dep range to every downstream consumer;
 
 Unpinned dependencies are time bombs. The rule is simple and per-language.
 
-**Required everywhere**: every production dependency is pinned to an exact version, and the lockfile is committed.
+**Per repo type — see "Repo type" section above for detection signals**:
+
+- **App / template / starter** (default when type is unclear) — every production dependency is pinned to an exact version, and the lockfile is committed.
+- **Library** — declared dependency ranges stay semver-compatible (caret or equivalent); the lockfile is committed *for tests only*; explicit compatibility matrix in CI (Node 18/20/22, Python 3.10/3.11/3.12, etc.).
+- **Monorepo** — per-package strategy: apps under `apps/` use exact pin, packages under `packages/` use semver range, root lockfile is committed.
+
+Mistaking a library for an app leaks the dep range to every downstream consumer; library-style ranges on an app produce silent floating versions. Catch the mismatch at audit time.
 
 - Python: `requirements.txt` with `package==1.2.3` or `pyproject.toml` + `uv.lock` / `poetry.lock`.
 - Node: `package.json` + `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock` / `bun.lockb`.

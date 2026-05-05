@@ -7,13 +7,14 @@
 # can prove every reference moved.
 #
 # Usage:
-#   scripts/callsite-count.sh <ref-before> <ref-after> <before-symbol>
-#   scripts/callsite-count.sh <ref-before> <ref-after> <before-symbol> <after-symbol>
+#   scripts/callsite-count.sh [--allow-extra] <ref-before> <ref-after> <before-symbol>
+#   scripts/callsite-count.sh [--allow-extra] <ref-before> <ref-after> <before-symbol> <after-symbol>
 #
 # Examples:
 #   scripts/callsite-count.sh HEAD~1 HEAD fetch_user
 #   scripts/callsite-count.sh "$SNAP" HEAD fetch_user get_user     # renamed
 #   scripts/callsite-count.sh "$SNAP" HEAD 'oldA|oldB' 'newA|newB'
+#   scripts/callsite-count.sh --allow-extra "$SNAP" HEAD foo       # wrapper/alias intentionally added
 #
 # The symbol arguments are ripgrep regexes. For a rename, pass the old pattern
 # first and the new pattern second. The script proves:
@@ -22,13 +23,28 @@
 #
 # Exit code:
 #   0 — counts match and stale old-name references are gone
-#   1 — counts disagree — callsites were missed
+#   1 — counts disagree — callsites were missed OR extra callsites appeared
+#       without --allow-extra
 #   2 — bad args or missing tool
+#
+# By default, after > before is treated as failure: extra callsites mean the
+# refactor invariant ("before/after counts match") was broken. If the extras
+# are intentional (wrapper, adapter, alias), pass --allow-extra to opt in.
 
 set -euo pipefail
 
+ALLOW_EXTRA=0
+positional=()
+for arg in "$@"; do
+    case "$arg" in
+        --allow-extra) ALLOW_EXTRA=1 ;;
+        *) positional+=("$arg") ;;
+    esac
+done
+set -- "${positional[@]:-}"
+
 if [ $# -lt 3 ] || [ $# -gt 4 ]; then
-    echo "usage: $0 <ref-before> <ref-after> <before-symbol-regex> [after-symbol-regex]" >&2
+    echo "usage: $0 [--allow-extra] <ref-before> <ref-after> <before-symbol-regex> [after-symbol-regex]" >&2
     exit 2
 fi
 
@@ -102,7 +118,15 @@ if [ "$before_count" -eq "$after_count" ]; then
 fi
 
 if [ "$after_count" -gt "$before_count" ]; then
-    echo "NOTE — $AFTER has more references ($((after_count - before_count)) new)."
-    echo "This can be intentional (wrapper, adapter, alias), but confirm with the operator."
-    exit 0
+    extras=$((after_count - before_count))
+    if [ "$ALLOW_EXTRA" -eq 1 ]; then
+        echo "NOTE — $AFTER has $extras more references (intentional, --allow-extra was passed)."
+        exit 0
+    fi
+    echo "FAIL — $AFTER has $extras more references than $BEFORE."
+    echo "Refactor invariant broken: before-count must equal after-count."
+    echo "If wrapper / adapter / alias additions are intentional, re-run with --allow-extra."
+    echo "Sites in $AFTER matching '$AFTER_SYMBOL':"
+    list_sites_in_ref "$AFTER" "$AFTER_SYMBOL" | sed 's/^/  /'
+    exit 1
 fi

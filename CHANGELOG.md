@@ -4,6 +4,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-05-05
+
+### Fixed
+
+- `.github/workflows/release.yml` — third-party actions are now pinned to commit SHA per `setup-ci`'s own policy: `actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5` (v4), `actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065` (v5), `softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65` (v2). Prior `@v4` / `@v5` / `@v2` floating tags violated the pack's own *"tag can be moved; SHA cannot"* invariant — `setup-ci` warns user repos against this pattern, but vibesubin's own release CI was using it.
+- `.github/workflows/release.yml` — `pip install pytest` now pins to `pytest==8.3.3`, matching `validate-skills.yml`. Previously unpinned, so the same pytest suite could run with different pytest versions in the two workflows.
+- `.github/workflows/release.yml` — secret filename check regex expanded to mirror `manage-secrets-env`'s secret-shaped entry list: `id_ed25519*`, `*.p12`, `*.pfx`, `credentials*`, `secrets*`, `*.credentials.json` now also blocked. Prior regex only caught `.env`, `.pem`, `id_rsa`, `.key`, leaving SSH ed25519 keys, PFX bundles, and service-account JSON keys free to land in a release commit.
+- `.github/workflows/validate-skills.yml` — path triggers expanded to `scripts/**`, `tests/**`, `.claude-plugin/**`, `.github/workflows/**`, `MAINTENANCE.md`, `README.md`, `docs/i18n/**`. Previously only `plugins/**`, `scripts/validate_skills.py`, and the validate-skills workflow itself triggered, so manifest version-sync changes, test edits, release-workflow edits, and translated README updates could bypass validation.
+- `plugins/vibesubin/skills/refactor-verify/scripts/callsite-count.sh` — rename mode where `after_count > before_count` now exits 1 by default (previously printed a NOTE and exited 0). The `refactor-verify` invariant is *"before-count must equal after-count"*; a silent exit-0 on mismatch contradicted it. New `--allow-extra` flag opts in to intentional wrapper / adapter / alias additions.
+- `plugins/vibesubin/skills/refactor-verify/scripts/symbol-diff.sh` — every `rg` invocation now passes `--no-filename --no-line-number`, and outputs use `lang:symbol` prefix form. Internal moves (function relocated to a different file) no longer surface as a `dropped + added` false positive; public-API drops still surface because the symbol disappears from the language's symbol set.
+- `plugins/vibesubin/skills/refactor-verify/scripts/smoke-test.sh` — when `pnpm-lock.yaml` / `yarn.lock` / `bun.lockb` is present but the matching package manager is not installed, the script now exits 3 with a bootstrap hint. Previously fell back to `npm`, which would silently install a different dependency tree from the same lockfile and produce a misleading *"tests passed"* signal.
+- `plugins/vibesubin/skills/manage-secrets-env/SKILL.md` — `.env` file precedence is now correctly split between Next.js (`process.env → .env.$NODE_ENV.local → .env.local → .env.$NODE_ENV → .env`, *earlier wins*) and Vite (loads `.env`, `.env.local`, `.env.[mode]`, `.env.[mode].local`; *later wins* for files but already-set process env beats every file). Previously both were described with one shared chain, which is wrong for Next.js.
+- `plugins/vibesubin/skills/project-conventions/SKILL.md` — dependency pinning rule split per repo type (app/template: exact pin + committed lockfile / library: semver range + lockfile-for-tests + compatibility matrix / monorepo: per-package). Previously the repo-type table separated them but the body sentence collapsed everything to *"every production dependency is pinned to an exact version"*, contradicting the table for libraries.
+- `plugins/vibesubin/skills/refactor-verify/SKILL.md` — frontmatter `allowed-tools` no longer includes `Bash(git stash *)`. The skill body declares `git stash` non-negotiable forbidden as an isolation mechanism; the tool-permission grant contradicted that.
+
+### Added
+
+- `plugins/vibesubin/skills/ship-cycle/references/branch-models.md` (130 lines) — new reference comparing GitHub Flow / GitFlow / Trunk-based, documenting why ship-cycle picks GitHub Flow and how it defers when a GitFlow / Trunk-based repo is detected (Step 1.5 announcement, Step 9 branch-naming deferral, Step 10 release-pipeline blocking on GitFlow). `ship-cycle/SKILL.md` Step 2 Assumptions block's `Branch convention:` line links to it.
+
+### Changed
+
+- Plugin version `0.7.1` → `0.7.2` in `.claude-plugin/marketplace.json` and `plugins/vibesubin/.claude-plugin/plugin.json`. Patch bump: every change in this release is either a fix to a self-policy violation or a documentation correctness gap surfaced by static self-audit, with one new reference (`branch-models.md`) added to close the GitHub-Flow-only deferral gap.
+
 ## [0.7.1] — 2026-04-27
 
 ### Added

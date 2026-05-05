@@ -59,7 +59,7 @@ Before proceeding past Step 2, write an explicit `Assumptions` block to the sess
 - Work scope:              <pasted findings | sweep output at /tmp/... | user-named area "perf in src/api/">
 - Issue language:          <Korean | English | Japanese | Chinese>
 - Milestone target:        <new version to cut — vX.Y.Z | just-issues mode, no release this cycle>
-- Branch convention:       <default: <type>/<issue-N>-<slug> per pr-branch-conventions.md — or detected existing convention (e.g., "feature/<topic>") if CONTRIBUTING.md / CLAUDE.md / last 20 branches show one>
+- Branch convention:       <default: <type>/<issue-N>-<slug> per pr-branch-conventions.md — or detected existing convention (e.g., "feature/<topic>") if CONTRIBUTING.md / CLAUDE.md / last 20 branches show one. For non-GitHub-Flow models (GitFlow, Trunk-based with release branches), see references/branch-models.md for ship-cycle's deferral behavior.>
 - Merge strategy:          <squash (default) | rebase | merge — detected from repo settings + CONTRIBUTING.md>
 ```
 

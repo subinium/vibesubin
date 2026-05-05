@@ -47,32 +47,36 @@ extract() {
     git worktree add --quiet --detach "$wt" "$ref" 2>/dev/null
     (
         cd "$wt"
-        # Patterns for common languages. Each outputs "file:symbol".
+        # Patterns for common languages. Each outputs "lang:symbol" so that
+        # internal moves (same symbol, different file/line) collapse to one
+        # entry — comparing path-or-line would mark every move as a drop +
+        # add. Public-API drops still show up because the symbol disappears
+        # from the language's symbol set entirely.
         # Python
-        rg -t py --no-heading --line-number \
+        rg -t py --no-heading --no-filename --no-line-number \
             '^(def|async def|class) ([A-Za-z_][A-Za-z0-9_]*)' \
-            -r '$2' 2>/dev/null || true
-        rg -t py --no-heading \
+            -r 'py:$2' 2>/dev/null || true
+        rg -t py --no-heading --no-filename --no-line-number \
             '^([A-Z][A-Z0-9_]*)\s*=' \
-            -r '$1' 2>/dev/null || true
+            -r 'py:$1' 2>/dev/null || true
         # JavaScript / TypeScript
-        rg -t js -t ts --no-heading \
+        rg -t js -t ts --no-heading --no-filename --no-line-number \
             '^export\s+(?:async\s+)?(?:function|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)' \
-            -r '$1' 2>/dev/null || true
-        rg -t js -t ts --no-heading \
+            -r 'ts:$1' 2>/dev/null || true
+        rg -t js -t ts --no-heading --no-filename --no-line-number \
             '^export\s*\{\s*([A-Za-z_$][A-Za-z0-9_$,\s]*)\s*\}' \
-            -r '$1' 2>/dev/null || true
+            -r 'ts:$1' 2>/dev/null || true
         # Rust
-        rg -t rust --no-heading \
+        rg -t rust --no-heading --no-filename --no-line-number \
             '^pub\s+(?:async\s+)?(?:fn|struct|enum|trait|const|static|type)\s+([A-Za-z_][A-Za-z0-9_]*)' \
-            -r '$1' 2>/dev/null || true
+            -r 'rs:$1' 2>/dev/null || true
         # Go
-        rg -t go --no-heading \
+        rg -t go --no-heading --no-filename --no-line-number \
             '^func\s+(?:\([^)]*\)\s+)?([A-Z][A-Za-z0-9_]*)' \
-            -r '$1' 2>/dev/null || true
-        rg -t go --no-heading \
+            -r 'go:$1' 2>/dev/null || true
+        rg -t go --no-heading --no-filename --no-line-number \
             '^(?:type|var|const)\s+([A-Z][A-Za-z0-9_]*)' \
-            -r '$1' 2>/dev/null || true
+            -r 'go:$1' 2>/dev/null || true
     ) | sort -u > "$outfile"
     git worktree remove --force "$wt" 2>/dev/null || true
 }

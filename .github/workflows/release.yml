@@ -11,16 +11,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.12'
 
       - name: Install pytest
-        run: pip install pytest
+        run: pip install pytest==8.3.3
 
       - name: Validate skills
         run: python3 scripts/validate_skills.py
@@ -40,9 +40,13 @@ jobs:
           fi
 
       - name: Verify no committed secrets
+        # Pattern set mirrors manage-secrets-env's secret-shaped entries
+        # (.env / .env.* / *.pem / *.key / id_rsa* / id_ed25519* /
+        # credentials* / secrets* / *.p12 / *.pfx / *.credentials.json).
+        # Narrower regex would let SSH/PFX/JSON keys slip past CI.
         run: |
-          if git ls-files | grep -iE '\.env$|\.pem$|id_rsa|\.key$' ; then
-            echo "::error::Forbidden file types committed"
+          if git ls-files -z | grep -ziE '(^|/)(\.env(\..*)?$|.*\.pem$|.*\.key$|id_rsa.*|id_ed25519.*|.*\.p12$|.*\.pfx$|.*credentials.*|.*secrets.*|.*\.credentials\.json$)' ; then
+            echo "::error::Forbidden file types committed (secret-shaped)"
             exit 1
           fi
 
@@ -52,10 +56,10 @@ jobs:
 
       - name: Create draft GitHub release
         # Draft: true so the human can paste functional-only notes per
-        # CLAUDE.md step 8 before publishing. CI is the validation safety
-        # net; the human still owns the release notes (sourced from the
-        # CHANGELOG.md [version] section).
-        uses: softprops/action-gh-release@v2
+        # MAINTENANCE.md release step before publishing. CI is the validation
+        # safety net; the human still owns the release notes (sourced from
+        # the CHANGELOG.md [version] section).
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           draft: true
           generate_release_notes: true

@@ -3,7 +3,7 @@ name: refactor-verify
 description: Proves a behavior-preserving code change (refactor, rename, split, merge, extract, inline, or delete of confirmed-dead code) is actually complete. Plans the change as a dependency tree, executes it from the leaves up, and after each step proves 1:1 semantic equivalence through four independent checks — exported symbol-set diff, per-node AST diff, full behavioral test suite, and call-site closure via find-references. Runs before claiming any such change is done. Works for any language with a test runner and a way to grep for symbols.
 mutates: [direct]
 when_to_use: Trigger on "refactor this", "move this function", "split this file", "extract this class", "rename X to Y", "delete this dead code safely", "is this still working after my change", "clean this up but don't break anything", or any request that restructures or removes code without intentional behavior change.
-allowed-tools: Read Edit Grep Glob Bash(git diff *) Bash(git status *) Bash(git log *) Bash(git worktree *) Bash(git switch *) Bash(git stash *) Bash(git rev-parse *) Bash(git show *) Bash(git branch *) Bash(git reset *) Bash(git grep *) Bash(npm *) Bash(pnpm *) Bash(yarn *) Bash(pytest *) Bash(cargo *) Bash(go test *) Bash(tsc *) Bash(ruff *) Bash(eslint *) Bash(mypy *) Bash(python *) Bash(node *)
+allowed-tools: Read Edit Grep Glob Bash(git diff *) Bash(git status *) Bash(git log *) Bash(git worktree *) Bash(git switch *) Bash(git rev-parse *) Bash(git show *) Bash(git branch *) Bash(git reset *) Bash(git grep *) Bash(npm *) Bash(pnpm *) Bash(yarn *) Bash(pytest *) Bash(cargo *) Bash(go test *) Bash(tsc *) Bash(ruff *) Bash(eslint *) Bash(mypy *) Bash(python *) Bash(node *)
 ---
 
 # refactor-verify

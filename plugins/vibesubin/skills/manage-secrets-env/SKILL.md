@@ -133,11 +133,12 @@ If a value is secret and also needs to be visible in the browser, it does not be
 
 ### Precedence when multiple `.env` files exist
 
-Most frameworks load several `.env` files in a defined order. Later files override earlier ones. When debugging *"why is this env var wrong?"*, always confirm which file the framework actually loaded — a value in `.env` can be silently overridden by `.env.local`.
+Frameworks load several `.env` files, but the *direction* of precedence is not consistent across them. When debugging *"why is this env var wrong?"*, never assume — always look up the framework's actual rule and confirm which file was loaded. The most common confusion is treating Next.js and Vite as identical; they are not.
 
-- **Next.js / Vite**: `.env` → `.env.<environment>` → `.env.local` → `.env.<environment>.local`. The `.local` variants are gitignored by convention; `.env.development` / `.env.production` are committed only if they contain non-secret defaults.
-- **Node `dotenv`**: one file by default. Use `dotenv-flow` or an explicit chain for multi-file support.
-- **Python `python-dotenv`**: one file by default; use `dotenv_values()` merging for explicit multi-file chains.
+- **Next.js**: lookup is `process.env` (already-set OS env) → `.env.$NODE_ENV.local` → `.env.local` (skipped when `NODE_ENV` is `test`) → `.env.$NODE_ENV` → `.env`. **Earlier in the chain wins.** The `.local` variants are gitignored by convention; `.env.development` / `.env.production` are committed only when they hold non-secret defaults.
+- **Vite**: loads `.env`, `.env.local`, `.env.[mode]`, `.env.[mode].local`, but **already-set process env always wins** over any file value, and mode-specific files override generic ones. Mode is `development` / `production` (default per `vite dev` / `vite build`) or any custom value passed via `--mode`. `.local` files are not loaded for `mode === 'test'`.
+- **Node `dotenv`**: one file by default. Use `dotenv-flow` or an explicit chain for multi-file support. By default, existing `process.env` values are not overwritten.
+- **Python `python-dotenv`**: one file by default; use `dotenv_values()` merging for explicit multi-file chains. `load_dotenv(override=False)` (the default) preserves existing `os.environ` values.
 - **Ruby / Rails**: reads `.env.<environment>` through `dotenv-rails`, with `.env.local` as an override.
 
 ## `.gitignore` — the default-safe template

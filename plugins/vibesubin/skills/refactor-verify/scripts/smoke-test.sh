@@ -89,14 +89,33 @@ if [ -f package.json ]; then
     if [ -f tsconfig.json ]; then
         maybe tsc --noEmit
     fi
-    # Prefer the package manager in use
-    if [ -f pnpm-lock.yaml ] && command -v pnpm >/dev/null 2>&1; then
+    # Lockfile-aware package manager selection. A pnpm/yarn/bun lockfile
+    # without the matching binary is a bootstrap mismatch — running npm
+    # against a pnpm/yarn lockfile silently installs a different dependency
+    # tree, so the "test passed" signal would be a lie. Refuse to fall back.
+    if [ -f pnpm-lock.yaml ]; then
+        if ! command -v pnpm >/dev/null 2>&1; then
+            echo "  ! pnpm-lock.yaml present but pnpm is not installed."
+            echo "    Bootstrap pnpm in this worktree (e.g., 'corepack enable pnpm') before trusting the result."
+            echo "    Refusing to fall back to npm — pnpm and npm produce different dep trees from the same lockfile."
+            exit 3
+        fi
         run_step "pnpm test --if-present" pnpm test --if-present
         run_step "pnpm lint --if-present" pnpm lint --if-present
-    elif [ -f yarn.lock ] && command -v yarn >/dev/null 2>&1; then
+    elif [ -f yarn.lock ]; then
+        if ! command -v yarn >/dev/null 2>&1; then
+            echo "  ! yarn.lock present but yarn is not installed."
+            echo "    Bootstrap yarn in this worktree before trusting the result."
+            exit 3
+        fi
         run_step "yarn test" yarn test
         run_step "yarn lint" yarn lint
-    elif [ -f bun.lockb ] && command -v bun >/dev/null 2>&1; then
+    elif [ -f bun.lockb ]; then
+        if ! command -v bun >/dev/null 2>&1; then
+            echo "  ! bun.lockb present but bun is not installed."
+            echo "    Bootstrap bun in this worktree before trusting the result."
+            exit 3
+        fi
         run_step "bun test" bun test
     elif command -v npm >/dev/null 2>&1; then
         run_step "npm test --if-present" npm test --if-present
